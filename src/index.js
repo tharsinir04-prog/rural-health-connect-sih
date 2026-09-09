@@ -2,7 +2,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Backend test endpoint
+    // Backend test API
     if (url.pathname === "/api/test") {
       return new Response(
         JSON.stringify({
@@ -11,20 +11,21 @@ export default {
         }),
         {
           headers: {
-            "content-type": "application/json"
+            "Content-Type": "application/json"
           }
         }
       );
     }
 
-    // Professional healthcare frontend
-    return new Response(`<!DOCTYPE html>
+    // Main website
+    const html = String.raw`
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Rural Health Connect - Connected healthcare access for rural communities in Maharashtra">
-  <title>Rural Health Connect | Healthcare Access</title>
+
+  <title>Rural Health Connect</title>
 
   <style>
     * {
@@ -33,446 +34,593 @@ export default {
       padding: 0;
     }
 
-    :root {
-      --blue-900: #0b2149;
-      --blue-800: #123b73;
-      --blue-700: #1557a6;
-      --blue-600: #1769c2;
-      --blue-100: #eaf3ff;
-      --blue-50: #f5f9ff;
-      --text: #172033;
-      --muted: #667085;
-      --border: #e4e9f0;
-      --white: #ffffff;
-      --shadow: 0 12px 35px rgba(16, 42, 78, 0.08);
-    }
-
     body {
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-        BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      background: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f9ff;
+      color: #172033;
       line-height: 1.6;
     }
 
-    a {
-      text-decoration: none;
-      color: inherit;
-    }
-
-    button {
-      font: inherit;
-    }
-
-    /* NAVBAR */
-
-    .navbar {
+    nav {
+      height: 72px;
+      background: white;
+      border-bottom: 1px solid #e3ebf5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 7%;
       position: sticky;
       top: 0;
-      z-index: 100;
-      background: rgba(255,255,255,0.96);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(12px);
+      z-index: 10;
     }
 
-    .nav-container {
-      max-width: 1180px;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #0756a8;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: #0756a8;
+      color: white;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    .links {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .links a {
+      text-decoration: none;
+      color: #46566d;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .links a:hover {
+      color: #0756a8;
+    }
+
+    .language {
+      border: 1px solid #d7e2ef;
+      padding: 9px 14px;
+      border-radius: 8px;
+      background: white;
+      color: #34445a;
+      font-weight: 600;
+    }
+
+    .hero {
+      min-height: 600px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 50px;
+      align-items: center;
+      padding: 75px 7%;
+      background: linear-gradient(135deg, #eef6ff, #ffffff);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 13px;
+      background: #e3f0ff;
+      color: #0756a8;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 50px;
+      line-height: 1.12;
+      max-width: 650px;
+      color: #102a43;
+      margin-bottom: 22px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: #5c6b7d;
+      max-width: 600px;
+      margin-bottom: 32px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 13px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+
+    .primary {
+      background: #0756a8;
+      color: white;
+    }
+
+    .primary:hover {
+      background: #064987;
+    }
+
+    .secondary {
+      background: white;
+      color: #0756a8;
+      border: 1px solid #bfd1e6;
+    }
+
+    .hero-card {
+      background: white;
+      border: 1px solid #dce7f3;
+      border-radius: 18px;
+      padding: 30px;
+      box-shadow: 0 15px 40px rgba(20, 70, 120, 0.10);
+    }
+
+    .hero-card h3 {
+      color: #12395e;
+      margin-bottom: 22px;
+      font-size: 21px;
+    }
+
+    .care-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 0;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .care-item:last-child {
+      border-bottom: none;
+    }
+
+    .care-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: #eaf4ff;
+      color: #0756a8;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+    }
+
+    .care-item strong {
+      display: block;
+      color: #20364f;
+      font-size: 15px;
+    }
+
+    .care-item span {
+      color: #738196;
+      font-size: 13px;
+    }
+
+    .section {
+      padding: 75px 7%;
+    }
+
+    .section-title {
+      text-align: center;
+      max-width: 700px;
       margin: auto;
-      min-height: 74px;
-      padding: 0 24px;
+    }
+
+    .section-title h2 {
+      font-size: 34px;
+      color: #102a43;
+      margin-bottom: 12px;
+    }
+
+    .section-title p {
+      color: #68778a;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+      margin-top: 45px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #dfe8f2;
+      border-radius: 14px;
+      padding: 27px;
+      transition: 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(25, 70, 110, 0.09);
+    }
+
+    .card-icon {
+      width: 46px;
+      height: 46px;
+      background: #e9f4ff;
+      color: #0756a8;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .card h3 {
+      margin-bottom: 9px;
+      color: #20364f;
+    }
+
+    .card p {
+      color: #718096;
+      font-size: 14px;
+    }
+
+    .stats {
+      background: #0756a8;
+      color: white;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      padding: 45px 7%;
+      text-align: center;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .cta {
+      margin: 0 7% 70px;
+      padding: 45px;
+      border-radius: 16px;
+      background: #102f50;
+      color: white;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 30px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 750;
-      color: var(--blue-900);
-      white-space: nowrap;
+    .cta h2 {
+      margin-bottom: 8px;
     }
 
-    .brand-mark {
-      width: 42px;
-      height: 42px;
-      border-radius: 11px;
-      background: var(--blue-700);
-      color: white;
-      display: grid;
-      place-items: center;
-      font-size: 21px;
-      font-weight: 800;
-      box-shadow: 0 7px 18px rgba(23,105,194,.2);
+    .cta p {
+      color: #cbd8e6;
     }
 
-    .brand-text {
-      font-size: 16px;
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 28px;
-      color: #4d5b70;
-      font-size: 14px;
-      font-weight: 550;
-    }
-
-    .nav-links a:hover {
-      color: var(--blue-600);
-    }
-
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .language {
-      border: 1px solid var(--border);
-      background: white;
-      border-radius: 9px;
-      padding: 9px 12px;
-      color: #46546a;
-      cursor: pointer;
-    }
-
-    .nav-button {
-      border: 0;
-      background: var(--blue-700);
-      color: white;
-      padding: 10px 17px;
-      border-radius: 9px;
-      font-weight: 650;
-      cursor: pointer;
-      transition: .2s;
-    }
-
-    .nav-button:hover {
-      background: var(--blue-800);
-      transform: translateY(-1px);
-    }
-
-    /* HERO */
-
-    .hero {
-      background:
-        radial-gradient(circle at 80% 20%, #eaf3ff 0, transparent 34%),
-        linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-      border-bottom: 1px solid #edf1f6;
-    }
-
-    .hero-container {
-      max-width: 1180px;
-      margin: auto;
-      min-height: 540px;
-      padding: 82px 24px 70px;
-      display: grid;
-      grid-template-columns: 1.12fr .88fr;
-      align-items: center;
-      gap: 70px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--blue-700);
-      background: var(--blue-100);
-      border: 1px solid #d8e9ff;
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .02em;
-      margin-bottom: 20px;
-    }
-
-    .hero h1 {
-      font-size: clamp(38px, 5vw, 58px);
-      line-height: 1.08;
-      letter-spacing: -0.045em;
-      color: var(--blue-900);
-      max-width: 680px;
-      margin-bottom: 22px;
-    }
-
-    .hero h1 span {
-      color: var(--blue-600);
-    }
-
-    .hero-description {
-      max-width: 620px;
-      color: var(--muted);
-      font-size: 17px;
-      line-height: 1.75;
-      margin-bottom: 32px;
-    }
-
-    .hero-buttons {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .primary-button,
-    .secondary-button {
-      min-height: 46px;
-      padding: 0 19px;
-      border-radius: 9px;
-      font-weight: 650;
-      cursor: pointer;
-      transition: .2s;
-    }
-
-    .primary-button {
-      border: 1px solid var(--blue-700);
-      background: var(--blue-700);
-      color: white;
-      box-shadow: 0 8px 20px rgba(21,87,166,.18);
-    }
-
-    .primary-button:hover {
-      background: var(--blue-800);
-      transform: translateY(-1px);
-    }
-
-    .secondary-button {
-      border: 1px solid #cfd8e5;
-      background: white;
-      color: var(--blue-800);
-    }
-
-    .secondary-button:hover {
-      border-color: var(--blue-600);
-      background: var(--blue-50);
-    }
-
-    /* HERO PANEL */
-
-    .hero-panel {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 26px;
-      box-shadow: var(--shadow);
-    }
-
-    .panel-header {
+    footer {
+      background: #0b1f33;
+      color: #b9c8d8;
+      padding: 28px 7%;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .panel-title {
-      font-weight: 750;
-      color: var(--blue-900);
-    }
-
-    .live {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #347056;
-      font-size: 12px;
-      font-weight: 650;
-    }
-
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #3c9b68;
-    }
-
-    .service-list {
-      padding-top: 18px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .service-row {
-      display: flex;
-      align-items: center;
-      gap: 13px;
-      padding: 14px;
-      border: 1px solid #edf0f4;
-      border-radius: 11px;
-      background: #fbfcfe;
-    }
-
-    .service-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 9px;
-      display: grid;
-      place-items: center;
-      background: var(--blue-100);
-      color: var(--blue-700);
-      font-size: 17px;
-    }
-
-    .service-info strong {
-      display: block;
       font-size: 13px;
-      color: #26354b;
     }
 
-    .service-info small {
-      color: #7a8698;
-      font-size: 11px;
+    @media (max-width: 850px) {
+      .links a {
+        display: none;
+      }
+
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 55px;
+      }
+
+      h1 {
+        font-size: 39px;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cta {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
 
-    /* TRUST BAR */
+    @media (max-width: 500px) {
+      nav {
+        padding: 0 5%;
+      }
 
-    .trust-bar {
-      max-width: 1180px;
-      margin: auto;
-      padding: 24px;
-      display: grid;
-      grid-template-columns: repeat(4,1fr);
-      gap: 14px;
+      .hero,
+      .section {
+        padding-left: 5%;
+        padding-right: 5%;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .stats {
+        padding-left: 5%;
+        padding-right: 5%;
+      }
+
+      .cta {
+        margin-left: 5%;
+        margin-right: 5%;
+      }
+
+      footer {
+        flex-direction: column;
+        gap: 8px;
+      }
     }
+  </style>
+</head>
 
-    .trust-item {
-      padding: 17px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: white;
-    }
+<body>
 
-    .trust-item strong {
-      display: block;
-      color: var(--blue-900);
-      font-size: 14px;
-      margin-bottom: 3px;
-    }
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">+</div>
+      Rural Health Connect
+    </div>
 
-    .trust-item span {
-      color: var(--muted);
-      font-size: 12px;
-    }
+    <div class="links">
+      <a href="#home">Home</a>
+      <a href="#services">Services</a>
+      <a href="#how">How It Works</a>
+      <a href="#facilities">Facilities</a>
+      <a href="#about">About</a>
+      <button class="language">मराठी ▾</button>
+    </div>
+  </nav>
 
-    /* SERVICES */
+  <main>
 
-    .section {
-      padding: 82px 24px;
-    }
+    <section class="hero" id="home">
+      <div>
+        <span class="badge">Digital Healthcare Access Platform</span>
 
-    .section-container {
-      max-width: 1180px;
-      margin: auto;
-    }
+        <h1>Healthcare access, closer to home.</h1>
 
-    .section-heading {
-      max-width: 650px;
-      margin-bottom: 38px;
-    }
+        <p>
+          Connected care for rural communities across Maharashtra,
+          helping patients, health workers and doctors coordinate care
+          with less travel and better continuity.
+        </p>
 
-    .section-label {
-      color: var(--blue-600);
-      font-size: 12px;
-      font-weight: 750;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      margin-bottom: 9px;
-    }
+        <div class="buttons">
+          <a href="#services" class="btn primary">Book Consultation</a>
+          <a href="#facilities" class="btn secondary">Find a Facility</a>
+        </div>
+      </div>
 
-    .section-heading h2 {
-      color: var(--blue-900);
-      font-size: 34px;
-      letter-spacing: -.025em;
-      margin-bottom: 10px;
-    }
+      <div class="hero-card">
+        <h3>Connected Care Services</h3>
 
-    .section-heading p {
-      color: var(--muted);
-      font-size: 15px;
-    }
+        <div class="care-item">
+          <div class="care-icon">01</div>
+          <div>
+            <strong>Teleconsultation</strong>
+            <span>Connect with healthcare professionals</span>
+          </div>
+        </div>
 
-    .service-grid {
-      display: grid;
-      grid-template-columns: repeat(3,1fr);
-      gap: 18px;
-    }
+        <div class="care-item">
+          <div class="care-icon">02</div>
+          <div>
+            <strong>Digital Records</strong>
+            <span>Maintain accessible patient information</span>
+          </div>
+        </div>
 
-    .feature-card {
-      padding: 25px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: white;
-      transition: .2s;
-    }
+        <div class="care-item">
+          <div class="care-icon">03</div>
+          <div>
+            <strong>Referral Tracking</strong>
+            <span>Follow referrals across facilities</span>
+          </div>
+        </div>
 
-    .feature-card:hover {
-      transform: translateY(-3px);
-      border-color: #c7dbf5;
-      box-shadow: var(--shadow);
-    }
+        <div class="care-item">
+          <div class="care-icon">04</div>
+          <div>
+            <strong>Follow-up Support</strong>
+            <span>Improve continuity of care</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    .feature-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: var(--blue-100);
-      color: var(--blue-700);
-      display: grid;
-      place-items: center;
-      margin-bottom: 18px;
-      font-size: 20px;
-    }
+    <section class="section" id="services">
+      <div class="section-title">
+        <h2>Healthcare services in one connected platform</h2>
+        <p>
+          Designed to support rural patients and frontline healthcare teams
+          while strengthening the existing public healthcare system.
+        </p>
+      </div>
 
-    .feature-card h3 {
-      font-size: 16px;
-      color: var(--blue-900);
-      margin-bottom: 8px;
-    }
+      <div class="cards">
 
-    .feature-card p {
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.65;
-    }
+        <div class="card">
+          <div class="card-icon">TC</div>
+          <h3>Teleconsultation</h3>
+          <p>
+            Support assisted consultations between patients,
+            frontline workers and doctors.
+          </p>
+        </div>
 
-    /* ACCESS */
+        <div class="card">
+          <div class="card-icon">AR</div>
+          <h3>Appointments</h3>
+          <p>
+            Manage consultation requests, appointment schedules
+            and waiting queues efficiently.
+          </p>
+        </div>
 
-    .access-section {
-      background: var(--blue-50);
-      border-top: 1px solid #e6effa;
-      border-bottom: 1px solid #e6effa;
-    }
+        <div class="card">
+          <div class="card-icon">RF</div>
+          <h3>Referral Management</h3>
+          <p>
+            Track referrals from local facilities to higher-level
+            healthcare centres.
+          </p>
+        </div>
 
-    .access-grid {
-      display: grid;
-      grid-template-columns: repeat(4,1fr);
-      gap: 16px;
-    }
+        <div class="card">
+          <div class="card-icon">DR</div>
+          <h3>Digital Records</h3>
+          <p>
+            Maintain longitudinal medical information to improve
+            continuity between facilities.
+          </p>
+        </div>
 
-    .role-card {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 23px;
-    }
+        <div class="card">
+          <div class="card-icon">DX</div>
+          <h3>Diagnostics</h3>
+          <p>
+            Coordinate diagnostic services and improve visibility
+            of available facilities.
+          </p>
+        </div>
 
-    .role-number {
-      color: var(--blue-600);
-      font-size: 12px;
-      font-weight: 750;
-      margin-bottom: 15px;
-    }
+        <div class="card">
+          <div class="card-icon">FU</div>
+          <h3>Follow-up Care</h3>
+          <p>
+            Support maternal, child and chronic-care follow-ups
+            with timely reminders.
+          </p>
+        </div>
 
-    .role-card h3 {
-      color: var(--blue-900);
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
+      </div>
+    </section>
 
-    .role-card p {
-      color: var(--muted);
-      font-size: 12
+    <section class="stats">
+      <div class="stat">
+        <strong>24/7</strong>
+        <span>Digital access</span>
+      </div>
+
+      <div class="stat">
+        <strong>3+</strong>
+        <span>Language support</span>
+      </div>
+
+      <div class="stat">
+        <strong>Low</strong>
+        <span>Connectivity friendly</span>
+      </div>
+
+      <div class="stat">
+        <strong>1</strong>
+        <span>Connected care platform</span>
+      </div>
+    </section>
+
+    <section class="section" id="how">
+      <div class="section-title">
+        <h2>How Rural Health Connect works</h2>
+        <p>
+          A simple workflow connecting communities with the right
+          healthcare support.
+        </p>
+      </div>
+
+      <div class="cards">
+
+        <div class="card">
+          <div class="card-icon">1</div>
+          <h3>Register</h3>
+          <p>
+            Patient information is securely recorded by the patient
+            or trained frontline worker.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">2</div>
+          <h3>Connect</h3>
+          <p>
+            The health worker coordinates appointments,
+            consultation and diagnostic support.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">3</div>
+          <h3>Continue Care</h3>
+          <p>
+            Referrals and follow-ups are tracked so patients
+            receive continued support.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="cta" id="about">
+      <div>
+        <h2>Building a more connected rural healthcare system.</h2>
+        <p>
+          Technology that supports healthcare workers,
+          improves coordination and brings care closer to communities.
+        </p>
+      </div>
+
+      <a href="#services" class="btn primary">Explore Services</a>
+    </section>
+
+  </main>
+
+  <footer id="facilities">
+    <span>© 2026 Rural Health Connect</span>
+    <span>Built for accessible and connected rural healthcare</span>
+  </footer>
+
+</body>
+</html>
+`;
+
+    return new Response(html, {
+      headers: {
+        "Content-Type": "text/html; charset=UTF-8"
+      }
+    });
+  }
+};
