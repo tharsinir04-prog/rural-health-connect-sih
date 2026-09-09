@@ -1,5 +1,12 @@
 {
   "name": "rural-health-connect-sih",
   "main": "src/index.js",
-  "compatibility_date": "2026-09-08"
+  "compatibility_date": "2026-09-08",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rural-health-connect-db",
+      "database_id": "48b1e795-c300-4e7a-9142-31a76cfe38e9"
+    }
+  ]
 }
