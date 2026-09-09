@@ -4,6 +4,82 @@ export default {
 
     // Backend test API
     if (url.pathname === "/api/test") {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: "Rural Health Connect backend is working"
+    }),
+    {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    }
+  );
+}
+        // Patient registration API
+    if (url.pathname === "/api/patients" && request.method === "POST") {
+      try {
+        const data = await request.json();
+
+        if (!data.name || !data.age || !data.gender || !data.village) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Name, age, gender and village are required"
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
+
+        const result = await env.DB.prepare(
+          `INSERT INTO patients
+          (name, age, gender, village, phone)
+          VALUES (?, ?, ?, ?, ?)`
+        )
+          .bind(
+            data.name,
+            data.age,
+            data.gender,
+            data.village,
+            data.phone || null
+          )
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Patient registered successfully",
+            patient_id: result.meta.last_row_id
+          }),
+          {
+            status: 201,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to register patient"
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
+    }
+    if (url.pathname === "/api/test") {
       return new Response(
         JSON.stringify({
           success: true,
