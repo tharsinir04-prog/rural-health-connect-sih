@@ -1,5 +1,20 @@
 export default {
-  async fetch(request) {
+  async fetch(request) { 
+    const url = new URL(request.url);
+
+if (url.pathname === "/api/test") {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: "Rural Health Connect backend is working 🚀"
+    }),
+    {
+      headers: {
+        "content-type": "application/json"
+      }
+    }
+  );
+}
     return new Response(`
 <!DOCTYPE html>
 <html lang="en">
