@@ -645,6 +645,7 @@ export default {
       <a href="#services">Services</a>
       <a href="#how">How It Works</a>
       <a href="#facilities">Facilities</a>
+      <a href="#records">Patient Records</a>
       <a href="#about">About</a>
       <button class="language">मराठी ▾</button>
     </div>
