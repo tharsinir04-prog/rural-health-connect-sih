@@ -17,6 +17,81 @@ export default {
   );
 }
         // Patient registration API
+        // Get patient by ID
+    if (url.pathname === "/api/patients" && request.method === "GET") {
+      const patientId = url.searchParams.get("id");
+
+      if (!patientId) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Patient ID is required"
+          }),
+          {
+            status: 400,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
+
+      try {
+        const patient = await env.DB.prepare(
+          "SELECT * FROM patients WHERE id = ?"
+        )
+          .bind(patientId)
+          .first();
+
+        if (!patient) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Patient not found"
+            }),
+            {
+              status: 404,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
+
+        const records = await env.DB.prepare(
+          "SELECT * FROM medical_records WHERE patient_id = ? ORDER BY created_at DESC"
+        )
+          .bind(patientId)
+          .all();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            patient: patient,
+            medical_records: records.results
+          }),
+          {
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to retrieve patient record"
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
+    }
     if (url.pathname === "/api/patients" && request.method === "POST") {
       try {
         const data = await request.json();
