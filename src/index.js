@@ -571,6 +571,66 @@ export default {
       font-size: 14px;
       font-weight: 600;
     }
+    .record-search {
+  display: flex;
+  gap: 12px;
+  max-width: 700px;
+  margin: 0 auto 30px;
+}
+
+.record-search input {
+  flex: 1;
+  padding: 13px 15px;
+  border: 1px solid #d5e0eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.record-search input:focus {
+  border-color: #0756a8;
+}
+
+.patient-result-card {
+  max-width: 700px;
+  margin: 0 auto;
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 14px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e1e8ef;
+}
+
+.patient-result-card h3 {
+  color: #0756a8;
+  margin-bottom: 15px;
+}
+
+.patient-result-card h4 {
+  color: #102a43;
+  margin-top: 18px;
+}
+
+.patient-result-card p {
+  color: #52606d;
+  margin: 8px 0;
+}
+
+.patient-result-card hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 18px 0;
+}
+
+@media (max-width: 600px) {
+  .record-search {
+    flex-direction: column;
+  }
+
+  .record-search button {
+    width: 100%;
+  }
+}
     @media (max-width: 850px) {
       .links a {
         display: none;
