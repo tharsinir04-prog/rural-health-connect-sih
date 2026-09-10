@@ -799,6 +799,29 @@ export default {
     </section>
 
     <section class="section" id="how">
+    <section class="section" id="records">
+  <div class="section-title">
+    <h2>Patient Records</h2>
+    <p>
+      Securely access a patient's healthcare information using their
+      patient ID.
+    </p>
+  </div>
+
+  <div class="record-search">
+    <input
+      type="number"
+      id="searchPatientId"
+      placeholder="Enter Patient ID"
+    >
+
+    <button class="btn primary" onclick="searchPatient()">
+      Search Patient
+    </button>
+  </div>
+
+  <div id="patientResult"></div>
+</section>
       <div class="section-title">
         <h2>How Rural Health Connect works</h2>
         <p>
@@ -983,6 +1006,48 @@ export default {
       closePatientForm();
     }
   });
+async function searchPatient() {
+  const patientId = document.getElementById("searchPatientId").value;
+  const resultBox = document.getElementById("patientResult");
+
+  if (!patientId) {
+    resultBox.innerHTML = "<p>Please enter a Patient ID.</p>";
+    return;
+  }
+
+  resultBox.innerHTML = "<p>Searching patient record...</p>";
+
+  try {
+    const response = await fetch(
+      "/api/patients?id=" + encodeURIComponent(patientId)
+    );
+
+    const data = await response.json();
+
+    if (!data.success) {
+      resultBox.innerHTML = "<p>Patient record not found.</p>";
+      return;
+    }
+
+    const patient = data.patient;
+
+    resultBox.innerHTML =
+      '<div class="patient-result-card">' +
+      "<h3>" + patient.name + "</h3>" +
+      "<p><strong>Patient ID:</strong> " + patient.id + "</p>" +
+      "<p><strong>Age:</strong> " + patient.age + "</p>" +
+      "<p><strong>Gender:</strong> " + patient.gender + "</p>" +
+      "<p><strong>Village:</strong> " + patient.village + "</p>" +
+      "<p><strong>Phone:</strong> " + (patient.phone || "Not provided") + "</p>" +
+      "<hr>" +
+      "<h4>Medical Records</h4>" +
+      "<p>" + data.medical_records.length + " medical record(s) available.</p>" +
+      "</div>";
+  } catch (error) {
+    resultBox.innerHTML =
+      "<p>Unable to connect to the healthcare server.</p>";
+  }
+}
 </script>
 </body>
 </html>
