@@ -402,7 +402,100 @@ export default {
       justify-content: space-between;
       font-size: 13px;
     }
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 35, 60, 0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
 
+    .modal-box {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    }
+
+    .modal-box h2 {
+      color: #102a43;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtitle {
+      color: #718096;
+      font-size: 14px;
+      margin-bottom: 22px;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      border: none;
+      background: transparent;
+      font-size: 28px;
+      color: #68778a;
+      cursor: pointer;
+    }
+
+    .modal-box label {
+      display: block;
+      margin: 14px 0 6px;
+      color: #34495e;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .modal-box input,
+    .modal-box select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d5e0eb;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .modal-box input:focus,
+    .modal-box select:focus {
+      border-color: #0756a8;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .submit-btn {
+      width: 100%;
+      margin-top: 22px;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: #0756a8;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .submit-btn:hover {
+      background: #064987;
+    }
+
+    #formMessage {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
     @media (max-width: 850px) {
       .links a {
         display: none;
@@ -497,7 +590,7 @@ export default {
         </p>
 
         <div class="buttons">
-          <a href="#services" class="btn primary">Book Consultation</a>
+          <button class="btn primary" onclick="openPatientForm()">Book Consultation</button>
           <a href="#facilities" class="btn secondary">Find a Facility</a>
         </div>
       </div>
@@ -688,7 +781,133 @@ export default {
     <span>© 2026 Rural Health Connect</span>
     <span>Built for accessible and connected rural healthcare</span>
   </footer>
+<!-- Patient Registration Modal -->
+<div id="patientModal" class="modal">
+  <div class="modal-box">
+    <button class="close-btn" onclick="closePatientForm()">×</button>
 
+    <h2>Patient Registration</h2>
+    <p class="modal-subtitle">
+      Enter patient details to begin connected healthcare support.
+    </p>
+
+    <form id="patientForm">
+
+      <label>Patient Name</label>
+      <input
+        type="text"
+        id="patientName"
+        placeholder="Enter full name"
+        required
+      >
+
+      <div class="form-row">
+        <div>
+          <label>Age</label>
+          <input
+            type="number"
+            id="patientAge"
+            placeholder="Age"
+            min="1"
+            max="120"
+            required
+          >
+        </div>
+
+        <div>
+          <label>Gender</label>
+          <select id="patientGender" required>
+            <option value="">Select gender</option>
+            <option value="Female">Female</option>
+            <option value="Male">Male</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Village</label>
+      <input
+        type="text"
+        id="patientVillage"
+        placeholder="Enter village"
+        required
+      >
+
+      <label>Phone Number</label>
+      <input
+        type="tel"
+        id="patientPhone"
+        placeholder="Enter phone number"
+        maxlength="10"
+      >
+
+      <button type="submit" class="submit-btn">
+        Register Patient
+      </button>
+
+      <div id="formMessage"></div>
+
+    </form>
+  </div>
+</div>
+<script>
+  function openPatientForm() {
+    document.getElementById("patientModal").style.display = "flex";
+  }
+
+  function closePatientForm() {
+    document.getElementById("patientModal").style.display = "none";
+  }
+
+  document.getElementById("patientForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const message = document.getElementById("formMessage");
+
+    const patient = {
+      name: document.getElementById("patientName").value.trim(),
+      age: document.getElementById("patientAge").value,
+      gender: document.getElementById("patientGender").value,
+      village: document.getElementById("patientVillage").value.trim(),
+      phone: document.getElementById("patientPhone").value.trim()
+    };
+
+    message.textContent = "Registering patient...";
+
+    try {
+      const response = await fetch("/api/patients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(patient)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.textContent =
+          "Patient registered successfully. ID: " + result.patient_id;
+
+        document.getElementById("patientForm").reset();
+      } else {
+        message.textContent = result.message || "Registration failed.";
+      }
+
+    } catch (error) {
+      message.textContent =
+        "Unable to connect to the healthcare server.";
+    }
+  });
+
+  window.addEventListener("click", function(event) {
+    const modal = document.getElementById("patientModal");
+
+    if (event.target === modal) {
+      closePatientForm();
+    }
+  });
+</script>
 </body>
 </html>
 `;
