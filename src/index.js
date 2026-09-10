@@ -18,6 +18,66 @@ export default {
 }
         // Patient registration API
         // Get patient by ID
+    if (url.pathname === "/api/medical-records" && request.method === "POST") {
+  try {
+    const data = await request.json();
+
+    if (!data.patient_id || !data.recorded_by || !data.record_type || !data.notes) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Patient ID, recorded by, record type and notes are required"
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    }
+
+    const result = await env.DB.prepare(
+      `INSERT INTO medical_records
+      (patient_id, recorded_by, record_type, notes)
+      VALUES (?, ?, ?, ?)`
+    )
+      .bind(
+        data.patient_id,
+        data.recorded_by,
+        data.record_type,
+        data.notes
+      )
+      .run();
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Medical record added successfully",
+        record_id: result.meta.last_row_id
+      }),
+      {
+        status: 201,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Unable to add medical record"
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
+}
     if (url.pathname === "/api/patients" && request.method === "GET") {
       const patientId = url.searchParams.get("id");
 
