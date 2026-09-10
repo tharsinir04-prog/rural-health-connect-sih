@@ -1000,6 +1000,59 @@ export default {
     <span>© 2026 Rural Health Connect</span>
     <span>Built for accessible and connected rural healthcare</span>
   </footer>
+  <!-- Add Medical Record Section -->
+<section class="section" id="add-record">
+  <div class="section-title">
+    <h2>Add Medical Record</h2>
+    <p>Healthcare workers can securely add a patient's medical record.</p>
+  </div>
+
+  <div class="record-form-card">
+    <form id="medicalRecordForm">
+
+      <label>Patient ID</label>
+      <input
+        type="number"
+        id="recordPatientId"
+        placeholder="Enter Patient ID"
+        required
+      >
+
+      <label>Recorded By</label>
+      <input
+        type="text"
+        id="recordedBy"
+        placeholder="Doctor / Health Worker name"
+        required
+      >
+
+      <label>Record Type</label>
+      <select id="recordType" required>
+        <option value="">Select record type</option>
+        <option value="Consultation">Consultation</option>
+        <option value="Diagnosis">Diagnosis</option>
+        <option value="Lab Report">Lab Report</option>
+        <option value="Prescription">Prescription</option>
+        <option value="Follow-up">Follow-up</option>
+      </select>
+
+      <label>Medical Notes</label>
+      <textarea
+        id="recordNotes"
+        placeholder="Enter medical notes"
+        rows="5"
+        required
+      ></textarea>
+
+      <button type="submit" class="submit-btn">
+        Add Medical Record
+      </button>
+
+      <div id="recordMessage"></div>
+
+    </form>
+  </div>
+</section>
 <!-- Patient Registration Modal -->
 <div id="patientModal" class="modal">
   <div class="modal-box">
@@ -1168,6 +1221,46 @@ async function searchPatient() {
       "<p>Unable to connect to the healthcare server.</p>";
   }
 }
+document.getElementById("medicalRecordForm").addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  const message = document.getElementById("recordMessage");
+
+  const record = {
+    patient_id: document.getElementById("recordPatientId").value,
+    recorded_by: document.getElementById("recordedBy").value.trim(),
+    record_type: document.getElementById("recordType").value,
+    notes: document.getElementById("recordNotes").value.trim()
+  };
+
+  message.textContent = "Saving medical record...";
+
+  try {
+    const response = await fetch("/api/medical-records", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(record)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      message.textContent =
+        "Medical record added successfully. Record ID: " + result.record_id;
+
+      document.getElementById("medicalRecordForm").reset();
+    } else {
+      message.textContent =
+        result.message || "Unable to add medical record.";
+    }
+
+  } catch (error) {
+    message.textContent =
+      "Unable to connect to the healthcare server.";
+  }
+});
 </script>
 </body>
 </html>
