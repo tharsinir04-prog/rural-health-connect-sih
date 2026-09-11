@@ -1214,7 +1214,32 @@ async function searchPatient() {
       "<p><strong>Phone:</strong> " + (patient.phone || "Not provided") + "</p>" +
       "<hr>" +
       "<h4>Medical Records</h4>" +
-      "<p>" + data.medical_records.length + " medical record(s) available.</p>" +
+     "<p><strong>Total Records:</strong> " +
+data.medical_records.length +
+"</p>" +
+
+data.medical_records.map(function(record) {
+  return (
+    '<div class="medical-record-item">' +
+    "<p><strong>Record Type:</strong> " +
+    record.record_type +
+    "</p>" +
+
+    "<p><strong>Recorded By:</strong> " +
+    record.recorded_by +
+    "</p>" +
+
+    "<p><strong>Medical Notes:</strong> " +
+    record.notes +
+    "</p>" +
+
+    "<p><strong>Date:</strong> " +
+    record.created_at +
+    "</p>" +
+
+    "</div>"
+  );
+}).join("")
       "</div>";
   } catch (error) {
     resultBox.innerHTML =
