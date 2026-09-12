@@ -1696,39 +1696,38 @@ async function searchPatient() {
       return;
     }
 
-    container.innerHTML = data.patients.map(patient => `
-      <div class="patient-card">
-        <h3>${escapeHtml(patient.name)}</h3>
+   container.innerHTML = data.patients.map(patient =>
+  '<div class="patient-card">' +
+    '<h3>' + escapeHtml(patient.name) + '</h3>' +
 
-        <p><strong>Patient ID:</strong>
-          ${escapeHtml(patient.id)}
-        </p>
+    '<p><strong>Patient ID:</strong> ' +
+      escapeHtml(patient.id) +
+    '</p>' +
 
-        <p><strong>Age:</strong>
-          ${escapeHtml(patient.age || "N/A")}
-        </p>
+    '<p><strong>Age:</strong> ' +
+      escapeHtml(patient.age || "N/A") +
+    '</p>' +
 
-        <p><strong>Gender:</strong>
-          ${escapeHtml(patient.gender || "N/A")}
-        </p>
+    '<p><strong>Gender:</strong> ' +
+      escapeHtml(patient.gender || "N/A") +
+    '</p>' +
 
-        <p><strong>Village:</strong>
-          ${escapeHtml(patient.village || "N/A")}
-        </p>
+    '<p><strong>Village:</strong> ' +
+      escapeHtml(patient.village || "N/A") +
+    '</p>' +
 
-        <p><strong>Phone:</strong>
-          ${escapeHtml(patient.phone || "N/A")}
-        </p>
+    '<p><strong>Phone:</strong> ' +
+      escapeHtml(patient.phone || "N/A") +
+    '</p>' +
 
-        <br>
+    '<br>' +
 
-        <button class="btn"
-          onclick="openPatientRecord(${patient.id})">
-          View Full Medical Report
-        </button>
-      </div>
-    `).join("");
+    '<button class="btn" onclick="openPatientRecord(' +
+      patient.id +
+    ')">View Full Medical Report</button>' +
 
+  '</div>'
+).join("");
   } catch (error) {
 
     document.getElementById("patientResults").innerHTML =
