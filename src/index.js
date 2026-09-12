@@ -118,30 +118,8 @@ export default {
   }
 } 
     if (url.pathname === "/api/appointments" && request.method === "POST") {
-// Create Referral API
-if (url.pathname === "/api/referrals" && request.method === "POST") {
-  try {
-    const data = await request.json();
 
-    if (
-      !data.patient_id ||
-      !data.from_facility ||
-      !data.to_facility ||
-      !data.reason
-    ) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Patient ID, from facility, to facility and reason are required"
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      );
-    }
+    
 
     const result = await env.DB.prepare(
       `INSERT INTO referrals
@@ -238,6 +216,72 @@ if (url.pathname === "/api/referrals" && request.method === "POST") {
       JSON.stringify({
         success: false,
         message: "Unable to book appointment"
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
+}
+// Create Referral API
+if (url.pathname === "/api/referrals" && request.method === "POST") {
+  try {
+    const data = await request.json();
+
+    if (
+      !data.patient_id ||
+      !data.from_facility ||
+      !data.to_facility ||
+      !data.reason
+    ) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Patient ID, from facility, to facility and reason are required"
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    }
+
+    const result = await env.DB.prepare(
+      `INSERT INTO referrals
+      (patient_id, from_facility, to_facility, reason)
+      VALUES (?, ?, ?, ?)`
+    )
+      .bind(
+        data.patient_id,
+        data.from_facility,
+        data.to_facility,
+        data.reason
+      )
+      .run();
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Referral created successfully",
+        referral_id: result.meta.last_row_id
+      }),
+      {
+        status: 201,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Unable to create referral"
       }),
       {
         status: 500,
@@ -1243,6 +1287,59 @@ if (url.pathname === "/api/referrals" && request.method === "POST") {
     <p>Click "Refresh Queue" to load appointments.</p>
   </div>
 </section>
+<!-- Referral Tracking Section -->
+<section class="section" id="referrals">
+  <div class="section-title">
+    <h2>Referral Tracking</h2>
+    <p>
+      Transfer patients between healthcare facilities and track referral status.
+    </p>
+  </div>
+
+  <div class="record-form-card">
+    <form id="referralForm">
+
+      <label>Patient ID</label>
+      <input
+        type="number"
+        id="referralPatientId"
+        placeholder="Enter Patient ID"
+        required
+      >
+
+      <label>From Facility</label>
+      <input
+        type="text"
+        id="fromFacility"
+        placeholder="e.g. Primary Health Centre"
+        required
+      >
+
+      <label>To Facility</label>
+      <input
+        type="text"
+        id="toFacility"
+        placeholder="e.g. District Hospital"
+        required
+      >
+
+      <label>Reason for Referral</label>
+      <textarea
+        id="referralReason"
+        placeholder="Enter reason for referral"
+        rows="4"
+        required
+      ></textarea>
+
+      <button type="submit" class="submit-btn">
+        Create Referral
+      </button>
+
+      <div id="referralMessage"></div>
+
+    </form>
+  </div>
+</section>
 <section class="section" id="add-record">
   <div class="section-title">
     <h2>Add Medical Record</h2>
@@ -1481,7 +1578,7 @@ data.medical_records.map(function(record) {
 
     "</div>"
   );
-}).join("")
+}).join("") +
       "</div>";
   } catch (error) {
     resultBox.innerHTML =
@@ -1622,6 +1719,43 @@ async function loadQueue() {
       "<p>Unable to load appointment queue.</p>";
   }
 }
+document.getElementById("referralForm").addEventListener("submit", async function (event) {
+  event.preventDefault();
+
+  const message = document.getElementById("referralMessage");
+
+  const data = {
+    patient_id: document.getElementById("referralPatientId").value,
+    from_facility: document.getElementById("fromFacility").value,
+    to_facility: document.getElementById("toFacility").value,
+    reason: document.getElementById("referralReason").value
+  };
+
+  message.textContent = "Creating referral...";
+
+  try {
+    const response = await fetch("/api/referrals", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      message.textContent =
+        "Referral created successfully. Referral ID: " + result.referral_id;
+
+      document.getElementById("referralForm").reset();
+    } else {
+      message.textContent = result.message;
+    }
+  } catch (error) {
+    message.textContent = "Unable to create referral.";
+  }
+});
 </script>
 </body>
 </html>
