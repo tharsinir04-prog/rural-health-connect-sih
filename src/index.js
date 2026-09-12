@@ -2,361 +2,50 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Backend test API
+    // =========================================================
+    // BASIC HEADERS
+    // =========================================================
+    const jsonHeaders = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: jsonHeaders
+      });
+    }
+
+    // =========================================================
+    // API TEST
+    // =========================================================
     if (url.pathname === "/api/test") {
       return new Response(
         JSON.stringify({
           success: true,
           message: "Rural Health Connect backend is working"
         }),
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
+        { headers: jsonHeaders }
       );
     }
 
-    // Patient registration API
-    // Get patient by ID
-    if (url.pathname === "/api/medical-records" && request.method === "POST") {
-      try {
-    const data = await request.json();
-
-    if (!data.patient_id || !data.recorded_by || !data.record_type || !data.notes) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Patient ID, recorded by, record type and notes are required"
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      );
-    }
-// Create Appointment API
-if (url.pathname === "/api/appointments" && request.method === "POST") {
-  try {
-    const data = await request.json();
-
-    if (
-      !data.patient_id ||
-      !data.appointment_date ||
-      !data.appointment_time
-    ) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Patient ID, appointment date and time are required"
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      );
-    }
-
-    const result = await env.DB.prepare(
-      `INSERT INTO appointments
-      (patient_id, doctor_name, appointment_date, appointment_time, reason)
-      VALUES (?, ?, ?, ?, ?)`
-    )
-      .bind(
-        data.patient_id,
-        data.doctor_name || null,
-        data.appointment_date,
-        data.appointment_time,
-        data.reason || null
-      )
-      .run();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Appointment booked successfully",
-        appointment_id: result.meta.last_row_id
-      }),
-      {
-        status: 201,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Unable to book appointment"
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  }
-}
- 
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Unable to add medical record"
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  }
-}
-   if (url.pathname === "/api/appointments" && request.method === "GET") {
-  try {
-    const appointments = await env.DB.prepare(
-      `SELECT
-        appointments.*,
-        patients.name AS patient_name
-      FROM appointments
-      LEFT JOIN patients
-        ON appointments.patient_id = patients.id
-      ORDER BY appointment_date ASC, appointment_time ASC`
-    ).all();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        appointments: appointments.results
-      }),
-      {
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Unable to retrieve appointments"
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  }
-} 
-
-    const result = await env.DB.prepare(
-      `INSERT INTO appointments
-      (patient_id, doctor_name, appointment_date, appointment_time, reason)
-      VALUES (?, ?, ?, ?, ?)`
-    )
-      .bind(
-        data.patient_id,
-        data.doctor_name || null,
-        data.appointment_date,
-        data.appointment_time,
-        data.reason || null
-      )
-      .run();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Appointment booked successfully",
-        appointment_id: result.meta.last_row_id
-      }),
-      {
-        status: 201,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Unable to book appointment"
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  }
-}
-// Create Referral API
-if (url.pathname === "/api/referrals" && request.method === "POST") {
-  try {
-    const data = await request.json();
-
-    if (
-      !data.patient_id ||
-      !data.from_facility ||
-      !data.to_facility ||
-      !data.reason
-    ) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          message: "Patient ID, from facility, to facility and reason are required"
-        }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
-      );
-    }
-
-    const result = await env.DB.prepare(
-      `INSERT INTO referrals
-      (patient_id, from_facility, to_facility, reason)
-      VALUES (?, ?, ?, ?)`
-    )
-      .bind(
-        data.patient_id,
-        data.from_facility,
-        data.to_facility,
-        data.reason
-      )
-      .run();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Referral created successfully",
-        referral_id: result.meta.last_row_id
-      }),
-      {
-        status: 201,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        message: "Unable to create referral"
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }
-    );
-  }
-}
-    if (url.pathname === "/api/patients" && request.method === "GET") {
-      const patientId = url.searchParams.get("id");
-
-      if (!patientId) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: "Patient ID is required"
-          }),
-          {
-            status: 400,
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-      }
-
-      try {
-        const patient = await env.DB.prepare(
-          "SELECT * FROM patients WHERE id = ?"
-        )
-          .bind(patientId)
-          .first();
-
-        if (!patient) {
-          return new Response(
-            JSON.stringify({
-              success: false,
-              message: "Patient not found"
-            }),
-            {
-              status: 404,
-              headers: {
-                "Content-Type": "application/json"
-              }
-            }
-          );
-        }
-
-        const records = await env.DB.prepare(
-          "SELECT * FROM medical_records WHERE patient_id = ? ORDER BY created_at DESC"
-        )
-          .bind(patientId)
-          .all();
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            patient: patient,
-            medical_records: records.results
-          }),
-          {
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-
-      } catch (error) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: "Unable to retrieve patient record"
-          }),
-          {
-            status: 500,
-            headers: {
-              "Content-Type": "application/json"
-            }
-          }
-        );
-      }
-    }
+    // =========================================================
+    // PATIENT REGISTRATION
+    // =========================================================
     if (url.pathname === "/api/patients" && request.method === "POST") {
       try {
         const data = await request.json();
 
-        if (!data.name || !data.age || !data.gender || !data.village) {
+        if (!data.name) {
           return new Response(
             JSON.stringify({
               success: false,
-              message: "Name, age, gender and village are required"
+              message: "Patient name is required"
             }),
-            {
-              status: 400,
-              headers: {
-                "Content-Type": "application/json"
-              }
-            }
+            { status: 400, headers: jsonHeaders }
           );
         }
 
@@ -367,9 +56,9 @@ if (url.pathname === "/api/referrals" && request.method === "POST") {
         )
           .bind(
             data.name,
-            data.age,
-            data.gender,
-            data.village,
+            data.age || null,
+            data.gender || null,
+            data.village || null,
             data.phone || null
           )
           .run();
@@ -382,12 +71,9 @@ if (url.pathname === "/api/referrals" && request.method === "POST") {
           }),
           {
             status: 201,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: jsonHeaders
           }
         );
-
       } catch (error) {
         return new Response(
           JSON.stringify({
@@ -396,1320 +82,1542 @@ if (url.pathname === "/api/referrals" && request.method === "POST") {
           }),
           {
             status: 500,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: jsonHeaders
           }
         );
       }
     }
-    if (url.pathname === "/api/test") {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "Rural Health Connect backend is working"
-        }),
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
+
+    // =========================================================
+    // SEARCH PATIENT
+    // =========================================================
+    if (url.pathname === "/api/patients" && request.method === "GET") {
+      try {
+        const id = url.searchParams.get("id");
+        const name = url.searchParams.get("name");
+
+        let result;
+
+        if (id) {
+          result = await env.DB.prepare(
+            `SELECT * FROM patients WHERE id = ?`
+          )
+            .bind(id)
+            .all();
+        } else if (name) {
+          result = await env.DB.prepare(
+            `SELECT * FROM patients
+             WHERE name LIKE ?
+             ORDER BY id DESC`
+          )
+            .bind(`%${name}%`)
+            .all();
+        } else {
+          result = await env.DB.prepare(
+            `SELECT * FROM patients ORDER BY id DESC LIMIT 50`
+          ).all();
         }
-      );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            patients: result.results
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to search patients"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
     }
 
-    // Main website
-    const html = String.raw`
-<!DOCTYPE html>
+    // =========================================================
+    // GET FULL PATIENT MEDICAL RECORD
+    // =========================================================
+    if (
+      url.pathname === "/api/patient-record" &&
+      request.method === "GET"
+    ) {
+      try {
+        const patientId = url.searchParams.get("patient_id");
+
+        if (!patientId) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Patient ID is required"
+            }),
+            { status: 400, headers: jsonHeaders }
+          );
+        }
+
+        const patient = await env.DB.prepare(
+          `SELECT * FROM patients WHERE id = ?`
+        )
+          .bind(patientId)
+          .first();
+
+        const records = await env.DB.prepare(
+          `SELECT * FROM medical_records
+           WHERE patient_id = ?
+           ORDER BY created_at DESC`
+        )
+          .bind(patientId)
+          .all();
+
+        const appointments = await env.DB.prepare(
+          `SELECT * FROM appointments
+           WHERE patient_id = ?
+           ORDER BY appointment_date DESC, appointment_time DESC`
+        )
+          .bind(patientId)
+          .all();
+
+        const referrals = await env.DB.prepare(
+          `SELECT * FROM referrals
+           WHERE patient_id = ?
+           ORDER BY referral_date DESC`
+        )
+          .bind(patientId)
+          .all();
+
+        const followups = await env.DB.prepare(
+          `SELECT * FROM follow_ups
+           WHERE patient_id = ?
+           ORDER BY follow_up_date DESC`
+        )
+          .bind(patientId)
+          .all();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            patient,
+            medical_records: records.results,
+            appointments: appointments.results,
+            referrals: referrals.results,
+            follow_ups: followups.results
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to load patient record"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // ADD MEDICAL RECORD
+    // =========================================================
+    if (
+      url.pathname === "/api/medical-records" &&
+      request.method === "POST"
+    ) {
+      try {
+        const data = await request.json();
+
+        if (!data.patient_id || !data.notes) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Patient ID and medical notes are required"
+            }),
+            {
+              status: 400,
+              headers: jsonHeaders
+            }
+          );
+        }
+
+        const result = await env.DB.prepare(
+          `INSERT INTO medical_records
+          (patient_id, recorded_by, record_type, notes)
+          VALUES (?, ?, ?, ?)`
+        )
+          .bind(
+            data.patient_id,
+            data.recorded_by || "Health Worker",
+            data.record_type || "General",
+            data.notes
+          )
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Medical record added successfully",
+            record_id: result.meta.last_row_id
+          }),
+          {
+            status: 201,
+            headers: jsonHeaders
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to add medical record"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // CREATE APPOINTMENT
+    // =========================================================
+    if (
+      url.pathname === "/api/appointments" &&
+      request.method === "POST"
+    ) {
+      try {
+        const data = await request.json();
+
+        if (
+          !data.patient_id ||
+          !data.appointment_date ||
+          !data.appointment_time
+        ) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message:
+                "Patient ID, appointment date and time are required"
+            }),
+            {
+              status: 400,
+              headers: jsonHeaders
+            }
+          );
+        }
+
+        const result = await env.DB.prepare(
+          `INSERT INTO appointments
+          (patient_id, doctor_name, appointment_date,
+           appointment_time, reason)
+          VALUES (?, ?, ?, ?, ?)`
+        )
+          .bind(
+            data.patient_id,
+            data.doctor_name || null,
+            data.appointment_date,
+            data.appointment_time,
+            data.reason || null
+          )
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Appointment booked successfully",
+            appointment_id: result.meta.last_row_id
+          }),
+          {
+            status: 201,
+            headers: jsonHeaders
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to book appointment"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // GET APPOINTMENTS / QUEUE
+    // =========================================================
+    if (
+      url.pathname === "/api/appointments" &&
+      request.method === "GET"
+    ) {
+      try {
+        const date = url.searchParams.get("date");
+
+        let result;
+
+        if (date) {
+          result = await env.DB.prepare(
+            `SELECT
+              appointments.*,
+              patients.name AS patient_name
+             FROM appointments
+             LEFT JOIN patients
+             ON appointments.patient_id = patients.id
+             WHERE appointment_date = ?
+             ORDER BY appointment_time ASC`
+          )
+            .bind(date)
+            .all();
+        } else {
+          result = await env.DB.prepare(
+            `SELECT
+              appointments.*,
+              patients.name AS patient_name
+             FROM appointments
+             LEFT JOIN patients
+             ON appointments.patient_id = patients.id
+             ORDER BY appointment_date DESC,
+                      appointment_time ASC
+             LIMIT 100`
+          ).all();
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            appointments: result.results
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to load appointments"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // UPDATE APPOINTMENT STATUS
+    // =========================================================
+    if (
+      url.pathname === "/api/appointments/status" &&
+      request.method === "POST"
+    ) {
+      try {
+        const data = await request.json();
+
+        if (!data.id || !data.status) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Appointment ID and status are required"
+            }),
+            {
+              status: 400,
+              headers: jsonHeaders
+            }
+          );
+        }
+
+        await env.DB.prepare(
+          `UPDATE appointments
+           SET status = ?
+           WHERE id = ?`
+        )
+          .bind(data.status, data.id)
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Appointment status updated"
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to update appointment"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // CREATE REFERRAL
+    // =========================================================
+    if (
+      url.pathname === "/api/referrals" &&
+      request.method === "POST"
+    ) {
+      try {
+        const data = await request.json();
+
+        if (
+          !data.patient_id ||
+          !data.from_facility ||
+          !data.to_facility ||
+          !data.reason
+        ) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message:
+                "Patient ID, from facility, to facility and reason are required"
+            }),
+            {
+              status: 400,
+              headers: jsonHeaders
+            }
+          );
+        }
+
+        const result = await env.DB.prepare(
+          `INSERT INTO referrals
+          (patient_id, from_facility, to_facility, reason)
+          VALUES (?, ?, ?, ?)`
+        )
+          .bind(
+            data.patient_id,
+            data.from_facility,
+            data.to_facility,
+            data.reason
+          )
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Referral created successfully",
+            referral_id: result.meta.last_row_id
+          }),
+          {
+            status: 201,
+            headers: jsonHeaders
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to create referral"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // GET REFERRALS
+    // =========================================================
+    if (
+      url.pathname === "/api/referrals" &&
+      request.method === "GET"
+    ) {
+      try {
+        const result = await env.DB.prepare(
+          `SELECT
+            referrals.*,
+            patients.name AS patient_name
+           FROM referrals
+           LEFT JOIN patients
+           ON referrals.patient_id = patients.id
+           ORDER BY referral_date DESC`
+        ).all();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            referrals: result.results
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to load referrals"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // UPDATE REFERRAL STATUS
+    // =========================================================
+    if (
+      url.pathname === "/api/referrals/status" &&
+      request.method === "POST"
+    ) {
+      try {
+        const data = await request.json();
+
+        if (!data.id || !data.status) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Referral ID and status are required"
+            }),
+            {
+              status: 400,
+              headers: jsonHeaders
+            }
+          );
+        }
+
+        await env.DB.prepare(
+          `UPDATE referrals
+           SET status = ?,
+               completed_at =
+               CASE
+                 WHEN ? = 'completed'
+                 THEN CURRENT_TIMESTAMP
+                 ELSE completed_at
+               END
+           WHERE id = ?`
+        )
+          .bind(data.status, data.status, data.id)
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Referral status updated"
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to update referral"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // CREATE FOLLOW-UP
+    // =========================================================
+    if (
+      url.pathname === "/api/follow-ups" &&
+      request.method === "POST"
+    ) {
+      try {
+        const data = await request.json();
+
+        if (!data.patient_id || !data.follow_up_date) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              message: "Patient ID and follow-up date are required"
+            }),
+            {
+              status: 400,
+              headers: jsonHeaders
+            }
+          );
+        }
+
+        const result = await env.DB.prepare(
+          `INSERT INTO follow_ups
+          (patient_id, follow_up_date, purpose, notes)
+          VALUES (?, ?, ?, ?)`
+        )
+          .bind(
+            data.patient_id,
+            data.follow_up_date,
+            data.purpose || null,
+            data.notes || null
+          )
+          .run();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Follow-up created successfully",
+            follow_up_id: result.meta.last_row_id
+          }),
+          {
+            status: 201,
+            headers: jsonHeaders
+          }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to create follow-up"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // GET FOLLOW-UPS
+    // =========================================================
+    if (
+      url.pathname === "/api/follow-ups" &&
+      request.method === "GET"
+    ) {
+      try {
+        const patientId = url.searchParams.get("patient_id");
+
+        let result;
+
+        if (patientId) {
+          result = await env.DB.prepare(
+            `SELECT
+              follow_ups.*,
+              patients.name AS patient_name
+             FROM follow_ups
+             LEFT JOIN patients
+             ON follow_ups.patient_id = patients.id
+             WHERE follow_ups.patient_id = ?
+             ORDER BY follow_up_date DESC`
+          )
+            .bind(patientId)
+            .all();
+        } else {
+          result = await env.DB.prepare(
+            `SELECT
+              follow_ups.*,
+              patients.name AS patient_name
+             FROM follow_ups
+             LEFT JOIN patients
+             ON follow_ups.patient_id = patients.id
+             ORDER BY follow_up_date DESC
+             LIMIT 100`
+          ).all();
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            follow_ups: result.results
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to load follow-ups"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // DASHBOARD STATISTICS
+    // =========================================================
+    if (
+      url.pathname === "/api/dashboard" &&
+      request.method === "GET"
+    ) {
+      try {
+        const patients = await env.DB.prepare(
+          `SELECT COUNT(*) AS count FROM patients`
+        ).first();
+
+        const appointments = await env.DB.prepare(
+          `SELECT COUNT(*) AS count FROM appointments`
+        ).first();
+
+        const referrals = await env.DB.prepare(
+          `SELECT COUNT(*) AS count FROM referrals`
+        ).first();
+
+        const pendingReferrals = await env.DB.prepare(
+          `SELECT COUNT(*) AS count
+           FROM referrals
+           WHERE status = 'pending'`
+        ).first();
+
+        const records = await env.DB.prepare(
+          `SELECT COUNT(*) AS count FROM medical_records`
+        ).first();
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            statistics: {
+              patients: patients.count,
+              appointments: appointments.count,
+              referrals: referrals.count,
+              pending_referrals: pendingReferrals.count,
+              medical_records: records.count
+            }
+          }),
+          { headers: jsonHeaders }
+        );
+      } catch (error) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            message: "Unable to load dashboard"
+          }),
+          {
+            status: 500,
+            headers: jsonHeaders
+          }
+        );
+      }
+    }
+
+    // =========================================================
+    // FRONTEND
+    // =========================================================
+
+    const html = String.raw`<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Rural Health Connect</title>
+<title>Rural Health Connect</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      background: #f5f9ff;
-      color: #172033;
-      line-height: 1.6;
-    }
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f4f7fb;
+  color: #1f2937;
+  line-height: 1.5;
+}
 
-    nav {
-      height: 72px;
-      background: white;
-      border-bottom: 1px solid #e3ebf5;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 7%;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
+header {
+  background: linear-gradient(135deg, #0f766e, #0e7490);
+  color: white;
+  padding: 24px 18px;
+}
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 20px;
-      font-weight: 700;
-      color: #0756a8;
-    }
+.header-inner {
+  max-width: 1200px;
+  margin: auto;
+}
 
-    .logo-icon {
-      width: 40px;
-      height: 40px;
-      background: #0756a8;
-      color: white;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font-size: 20px;
-    }
+.logo {
+  font-size: 28px;
+  font-weight: 800;
+}
 
-    .links {
-      display: flex;
-      gap: 28px;
-      align-items: center;
-    }
+.tagline {
+  margin-top: 5px;
+  opacity: .9;
+}
 
-    .links a {
-      text-decoration: none;
-      color: #46566d;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .links a:hover {
-      color: #0756a8;
-    }
-
-    .language {
-      border: 1px solid #d7e2ef;
-      padding: 9px 14px;
-      border-radius: 8px;
-      background: white;
-      color: #34445a;
-      font-weight: 600;
-    }
-
-    .hero {
-      min-height: 600px;
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 50px;
-      align-items: center;
-      padding: 75px 7%;
-      background: linear-gradient(135deg, #eef6ff, #ffffff);
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 8px 13px;
-      background: #e3f0ff;
-      color: #0756a8;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      font-size: 50px;
-      line-height: 1.12;
-      max-width: 650px;
-      color: #102a43;
-      margin-bottom: 22px;
-    }
-
-    .hero p {
-      font-size: 18px;
-      color: #5c6b7d;
-      max-width: 600px;
-      margin-bottom: 32px;
-    }
-
-    .buttons {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-
-    .btn {
-      padding: 13px 22px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      border: none;
-    }
-
-    .primary {
-      background: #0756a8;
-      color: white;
-    }
-
-    .primary:hover {
-      background: #064987;
-    }
-
-    .secondary {
-      background: white;
-      color: #0756a8;
-      border: 1px solid #bfd1e6;
-    }
-
-    .hero-card {
-      background: white;
-      border: 1px solid #dce7f3;
-      border-radius: 18px;
-      padding: 30px;
-      box-shadow: 0 15px 40px rgba(20, 70, 120, 0.10);
-    }
-
-    .hero-card h3 {
-      color: #12395e;
-      margin-bottom: 22px;
-      font-size: 21px;
-    }
-
-    .care-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 0;
-      border-bottom: 1px solid #edf2f7;
-    }
-
-    .care-item:last-child {
-      border-bottom: none;
-    }
-
-    .care-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 10px;
-      background: #eaf4ff;
-      color: #0756a8;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-    }
-
-    .care-item strong {
-      display: block;
-      color: #20364f;
-      font-size: 15px;
-    }
-
-    .care-item span {
-      color: #738196;
-      font-size: 13px;
-    }
-
-    .section {
-      padding: 75px 7%;
-    }
-
-    .section-title {
-      text-align: center;
-      max-width: 700px;
-      margin: auto;
-    }
-
-    .section-title h2 {
-      font-size: 34px;
-      color: #102a43;
-      margin-bottom: 12px;
-    }
-
-    .section-title p {
-      color: #68778a;
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 22px;
-      margin-top: 45px;
-    }
-
-    .card {
-      background: white;
-      border: 1px solid #dfe8f2;
-      border-radius: 14px;
-      padding: 27px;
-      transition: 0.2s;
-    }
-
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(25, 70, 110, 0.09);
-    }
-
-    .card-icon {
-      width: 46px;
-      height: 46px;
-      background: #e9f4ff;
-      color: #0756a8;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      font-weight: 700;
-      margin-bottom: 18px;
-    }
-
-    .card h3 {
-      margin-bottom: 9px;
-      color: #20364f;
-    }
-
-    .card p {
-      color: #718096;
-      font-size: 14px;
-    }
-
-    .stats {
-      background: #0756a8;
-      color: white;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      padding: 45px 7%;
-      text-align: center;
-    }
-
-    .stat strong {
-      display: block;
-      font-size: 28px;
-      margin-bottom: 4px;
-    }
-
-    .stat span {
-      font-size: 13px;
-      opacity: 0.9;
-    }
-
-    .cta {
-      margin: 0 7% 70px;
-      padding: 45px;
-      border-radius: 16px;
-      background: #102f50;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 30px;
-    }
-
-    .cta h2 {
-      margin-bottom: 8px;
-    }
-
-    .cta p {
-      color: #cbd8e6;
-    }
-
-    footer {
-      background: #0b1f33;
-      color: #b9c8d8;
-      padding: 28px 7%;
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-    }
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(10, 35, 60, 0.55);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-box {
-      width: 100%;
-      max-width: 500px;
-      background: white;
-      border-radius: 16px;
-      padding: 30px;
-      position: relative;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
-    }
-
-    .modal-box h2 {
-      color: #102a43;
-      margin-bottom: 6px;
-    }
-
-    .modal-subtitle {
-      color: #718096;
-      font-size: 14px;
-      margin-bottom: 22px;
-    }
-
-    .close-btn {
-      position: absolute;
-      top: 14px;
-      right: 16px;
-      border: none;
-      background: transparent;
-      font-size: 28px;
-      color: #68778a;
-      cursor: pointer;
-    }
-
-    .modal-box label {
-      display: block;
-      margin: 14px 0 6px;
-      color: #34495e;
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .modal-box input,
-    .modal-box select {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d5e0eb;
-      border-radius: 8px;
-      font-size: 14px;
-      outline: none;
-    }
-
-    .modal-box input:focus,
-    .modal-box select:focus {
-      border-color: #0756a8;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-    }
-
-    .submit-btn {
-      width: 100%;
-      margin-top: 22px;
-      padding: 13px;
-      border: none;
-      border-radius: 8px;
-      background: #0756a8;
-      color: white;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .submit-btn:hover {
-      background: #064987;
-    }
-
-    #formMessage {
-      margin-top: 14px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    .record-search {
+nav {
+  margin-top: 18px;
   display: flex;
-  gap: 12px;
-  max-width: 700px;
-  margin: 0 auto 30px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.record-search input {
-  flex: 1;
-  padding: 13px 15px;
-  border: 1px solid #d5e0eb;
+nav button {
+  border: none;
+  padding: 10px 14px;
   border-radius: 8px;
-  font-size: 14px;
-  outline: none;
+  background: rgba(255,255,255,.15);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
 }
 
-.record-search input:focus {
-  border-color: #0756a8;
+nav button:hover {
+  background: rgba(255,255,255,.28);
 }
 
-.patient-result-card {
-  max-width: 700px;
-  margin: 0 auto;
-  background: #ffffff;
-  padding: 25px;
+.container {
+  width: min(1200px, 94%);
+  margin: 25px auto 60px;
+}
+
+.hero {
+  background: white;
+  border-radius: 18px;
+  padding: 30px;
+  margin-bottom: 25px;
+  box-shadow: 0 5px 20px rgba(0,0,0,.07);
+}
+
+.hero h1 {
+  color: #0f766e;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  color: #64748b;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.stat {
+  background: white;
+  padding: 20px;
   border-radius: 14px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e1e8ef;
+  box-shadow: 0 4px 15px rgba(0,0,0,.06);
 }
 
-.patient-result-card h3 {
-  color: #0756a8;
+.stat-number {
+  font-size: 30px;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+.stat-label {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.section {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(0,0,0,.06);
+}
+
+.section h2 {
+  color: #0f766e;
+  margin-bottom: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.form-group {
   margin-bottom: 15px;
 }
 
-.patient-result-card h4 {
-  color: #102a43;
-  margin-top: 18px;
+label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 6px;
 }
 
-.patient-result-card p {
-  color: #52606d;
-  margin: 8px 0;
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 15px;
 }
 
-.patient-result-card hr {
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.btn {
   border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 18px 0;
+  border-radius: 9px;
+  padding: 12px 18px;
+  cursor: pointer;
+  background: #0f766e;
+  color: white;
+  font-weight: 700;
+}
+
+.btn:hover {
+  opacity: .9;
+}
+
+.btn-secondary {
+  background: #0e7490;
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-success {
+  background: #15803d;
+}
+
+.message {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  display: none;
+}
+
+.success {
+  display: block;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.error {
+  display: block;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.patient-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 18px;
+  border-radius: 12px;
+  margin-top: 15px;
+}
+
+.patient-card h3 {
+  color: #0f766e;
+  margin-bottom: 8px;
+}
+
+.record {
+  border-left: 4px solid #0f766e;
+  background: #f8fafc;
+  padding: 14px;
+  margin: 10px 0;
+  border-radius: 8px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+th {
+  background: #f1f5f9;
+}
+
+.badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.emergency {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.info-box {
+  background: #ecfeff;
+  border-left: 4px solid #0891b2;
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 8px;
+}
+
+footer {
+  background: #0f172a;
+  color: white;
+  text-align: center;
+  padding: 25px;
+  margin-top: 40px;
+}
+
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 600px) {
-  .record-search {
-    flex-direction: column;
+  .stats {
+    grid-template-columns: 1fr;
   }
 
-  .record-search button {
-    width: 100%;
+  .hero,
+  .section {
+    padding: 18px;
+  }
+
+  .logo {
+    font-size: 23px;
   }
 }
-    @media (max-width: 850px) {
-      .links a {
-        display: none;
-      }
-
-      .hero {
-        grid-template-columns: 1fr;
-        padding-top: 55px;
-      }
-
-      h1 {
-        font-size: 39px;
-      }
-
-      .cards {
-        grid-template-columns: 1fr;
-      }
-
-      .stats {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .cta {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-    }
-
-    @media (max-width: 500px) {
-      nav {
-        padding: 0 5%;
-      }
-
-      .hero,
-      .section {
-        padding-left: 5%;
-        padding-right: 5%;
-      }
-
-      h1 {
-        font-size: 34px;
-      }
-
-      .stats {
-        padding-left: 5%;
-        padding-right: 5%;
-      }
-
-      .cta {
-        margin-left: 5%;
-        margin-right: 5%;
-      }
-
-      footer {
-        flex-direction: column;
-        gap: 8px;
-      }
-    }
-  </style>
+</style>
 </head>
 
 <body>
 
-  <nav>
-    <div class="logo">
-      <div class="logo-icon">+</div>
-      Rural Health Connect
+<header>
+  <div class="header-inner">
+    <div class="logo">🏥 Rural Health Connect</div>
+    <div class="tagline">
+      Integrated Healthcare Access & Quality Support Platform
     </div>
 
-    <div class="links">
-      <a href="#home">Home</a>
-      <a href="#services">Services</a>
-      <a href="#how">How It Works</a>
-      <a href="#facilities">Facilities</a>
-      <a href="#records">Patient Records</a>
-      <a href="#about">About</a>
-      <button class="language">मराठी ▾</button>
-    </div>
-  </nav>
-
-  <main>
-
-    <section class="hero" id="home">
-      <div>
-        <span class="badge">Digital Healthcare Access Platform</span>
-
-        <h1>Healthcare access, closer to home.</h1>
-
-        <p>
-          Connected care for rural communities across Maharashtra,
-          helping patients, health workers and doctors coordinate care
-          with less travel and better continuity.
-        </p>
-
-        <div class="buttons">
-          <button class="btn primary" onclick="openPatientForm()">Book Consultation</button>
-          <a href="#facilities" class="btn secondary">Find a Facility</a>
-        </div>
-      </div>
-
-      <div class="hero-card">
-        <h3>Connected Care Services</h3>
-
-        <div class="care-item">
-          <div class="care-icon">01</div>
-          <div>
-            <strong>Teleconsultation</strong>
-            <span>Connect with healthcare professionals</span>
-          </div>
-        </div>
-
-        <div class="care-item">
-          <div class="care-icon">02</div>
-          <div>
-            <strong>Digital Records</strong>
-            <span>Maintain accessible patient information</span>
-          </div>
-        </div>
-
-        <div class="care-item">
-          <div class="care-icon">03</div>
-          <div>
-            <strong>Referral Tracking</strong>
-            <span>Follow referrals across facilities</span>
-          </div>
-        </div>
-
-        <div class="care-item">
-          <div class="care-icon">04</div>
-          <div>
-            <strong>Follow-up Support</strong>
-            <span>Improve continuity of care</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="services">
-      <div class="section-title">
-        <h2>Healthcare services in one connected platform</h2>
-        <p>
-          Designed to support rural patients and frontline healthcare teams
-          while strengthening the existing public healthcare system.
-        </p>
-      </div>
-
-      <div class="cards">
-
-        <div class="card">
-          <div class="card-icon">TC</div>
-          <h3>Teleconsultation</h3>
-          <p>
-            Support assisted consultations between patients,
-            frontline workers and doctors.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">AR</div>
-          <h3>Appointments</h3>
-          <p>
-            Manage consultation requests, appointment schedules
-            and waiting queues efficiently.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">RF</div>
-          <h3>Referral Management</h3>
-          <p>
-            Track referrals from local facilities to higher-level
-            healthcare centres.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">DR</div>
-          <h3>Digital Records</h3>
-          <p>
-            Maintain longitudinal medical information to improve
-            continuity between facilities.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">DX</div>
-          <h3>Diagnostics</h3>
-          <p>
-            Coordinate diagnostic services and improve visibility
-            of available facilities.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">FU</div>
-          <h3>Follow-up Care</h3>
-          <p>
-            Support maternal, child and chronic-care follow-ups
-            with timely reminders.
-          </p>
-        </div>
-
-      </div>
-    </section>
-
-    <section class="stats">
-      <div class="stat">
-        <strong>24/7</strong>
-        <span>Digital access</span>
-      </div>
-
-      <div class="stat">
-        <strong>3+</strong>
-        <span>Language support</span>
-      </div>
-
-      <div class="stat">
-        <strong>Low</strong>
-        <span>Connectivity friendly</span>
-      </div>
-
-      <div class="stat">
-        <strong>1</strong>
-        <span>Connected care platform</span>
-      </div>
-    </section>
-
-    <section class="section" id="how">
-    <section class="section" id="records">
-  <div class="section-title">
-    <h2>Patient Records</h2>
-    <p>
-      Securely access a patient's healthcare information using their
-      patient ID.
-    </p>
+    <nav>
+      <button onclick="scrollToSection('dashboard')">Dashboard</button>
+      <button onclick="scrollToSection('patient')">Patient</button>
+      <button onclick="scrollToSection('records')">Records</button>
+      <button onclick="scrollToSection('appointment')">Appointment</button>
+      <button onclick="scrollToSection('referral')">Referral</button>
+      <button onclick="scrollToSection('followup')">Follow-up</button>
+    </nav>
   </div>
+</header>
 
-  <div class="record-search">
-    <input
-      type="number"
-      id="searchPatientId"
-      placeholder="Enter Patient ID"
-    >
+<div class="container">
 
-    <button class="btn primary" onclick="searchPatient()">
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Healthcare for Rural & Underserved Communities</h1>
+    <p>
+      Connecting patients, frontline health workers and doctors while
+      improving continuity of care, referrals, diagnostics and follow-up.
+    </p>
+
+    <div class="info-box">
+      <strong>Important:</strong>
+      This platform supports trained healthcare workers and doctors.
+      It does not replace professional medical diagnosis or treatment.
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="section" id="dashboard">
+    <h2>📊 Healthcare Dashboard</h2>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-number" id="statPatients">0</div>
+        <div class="stat-label">Patients</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="statAppointments">0</div>
+        <div class="stat-label">Appointments</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="statReferrals">0</div>
+        <div class="stat-label">Referrals</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="statPending">0</div>
+        <div class="stat-label">Pending Referrals</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-number" id="statRecords">0</div>
+        <div class="stat-label">Medical Records</div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="loadDashboard()">
+      Refresh Dashboard
+    </button>
+  </section>
+
+  <!-- PATIENT -->
+  <section class="section" id="patient">
+    <h2>👤 Patient Registration</h2>
+
+    <div class="grid">
+
+      <div class="form-group">
+        <label>Patient Name *</label>
+        <input id="patientName" placeholder="Enter full name">
+      </div>
+
+      <div class="form-group">
+        <label>Age</label>
+        <input id="patientAge" type="number" min="0" max="120">
+      </div>
+
+      <div class="form-group">
+        <label>Gender</label>
+        <select id="patientGender">
+          <option value="">Select</option>
+          <option>Female</option>
+          <option>Male</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Village</label>
+        <input id="patientVillage" placeholder="Village / Area">
+      </div>
+
+      <div class="form-group">
+        <label>Phone</label>
+        <input id="patientPhone" placeholder="Phone number">
+      </div>
+
+    </div>
+
+    <button class="btn" onclick="registerPatient()">
+      Register Patient
+    </button>
+
+    <div id="patientMessage" class="message"></div>
+  </section>
+
+  <!-- SEARCH -->
+  <section class="section">
+    <h2>🔎 Patient Search</h2>
+
+    <div class="grid">
+
+      <div class="form-group">
+        <label>Patient ID</label>
+        <input id="searchPatientId" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>Patient Name</label>
+        <input id="searchPatientName">
+      </div>
+
+    </div>
+
+    <button class="btn btn-secondary" onclick="searchPatient()">
       Search Patient
     </button>
-  </div>
 
-  <div id="patientResult"></div>
-</section>
-      <div class="section-title">
-        <h2>How Rural Health Connect works</h2>
-        <p>
-          A simple workflow connecting communities with the right
-          healthcare support.
-        </p>
-      </div>
+    <div id="patientResults"></div>
+  </section>
 
-      <div class="cards">
+  <!-- RECORDS -->
+  <section class="section" id="records">
+    <h2>📋 Complete Medical Record</h2>
 
-        <div class="card">
-          <div class="card-icon">1</div>
-          <h3>Register</h3>
-          <p>
-            Patient information is securely recorded by the patient
-            or trained frontline worker.
-          </p>
-        </div>
+    <div class="form-group">
+      <label>Patient ID *</label>
+      <input id="recordPatientId" type="number"
+             placeholder="Enter patient ID">
+    </div>
 
-        <div class="card">
-          <div class="card-icon">2</div>
-          <h3>Connect</h3>
-          <p>
-            The health worker coordinates appointments,
-            consultation and diagnostic support.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-icon">3</div>
-          <h3>Continue Care</h3>
-          <p>
-            Referrals and follow-ups are tracked so patients
-            receive continued support.
-          </p>
-        </div>
-
-      </div>
-    </section>
-
-    <section class="cta" id="about">
-      <div>
-        <h2>Building a more connected rural healthcare system.</h2>
-        <p>
-          Technology that supports healthcare workers,
-          improves coordination and brings care closer to communities.
-        </p>
-      </div>
-
-      <a href="#services" class="btn primary">Explore Services</a>
-    </section>
-
-  </main>
-
-  <footer id="facilities">
-    <span>© 2026 Rural Health Connect</span>
-    <span>Built for accessible and connected rural healthcare</span>
-  </footer>
-  <!-- Appointment Booking Section -->
-<section class="section" id="appointments">
-  <div class="section-title">
-    <h2>Book Appointment</h2>
-    <p>Schedule a consultation with a healthcare professional.</p>
-  </div>
-
-  <div class="record-form-card">
-    <form id="appointmentForm">
-
-      <label>Patient ID</label>
-      <input
-        type="number"
-        id="appointmentPatientId"
-        placeholder="Enter Patient ID"
-        required
-      >
-
-      <label>Doctor Name</label>
-      <input
-        type="text"
-        id="appointmentDoctor"
-        placeholder="Enter doctor name"
-      >
-
-      <label>Appointment Date</label>
-      <input
-        type="date"
-        id="appointmentDate"
-        required
-      >
-
-      <label>Appointment Time</label>
-      <input
-        type="time"
-        id="appointmentTime"
-        required
-      >
-
-      <label>Reason for Consultation</label>
-      <textarea
-        id="appointmentReason"
-        placeholder="Enter reason for consultation"
-        rows="4"
-      ></textarea>
-
-      <button type="submit" class="submit-btn">
-        Book Appointment
-      </button>
-
-      <div id="appointmentMessage"></div>
-
-    </form>
-  </div>
-</section>
-  <!-- Add Medical Record Section -->
-  <!-- Queue Management Section -->
-<section class="section" id="queue">
-  <div class="section-title">
-    <h2>Appointment Queue</h2>
-    <p>View scheduled patients and their current consultation status.</p>
-  </div>
-
-  <div class="queue-actions">
-    <button class="btn primary" onclick="loadQueue()">
-      Refresh Queue
+    <button class="btn" onclick="loadPatientRecord()">
+      View Full Medical Report
     </button>
-  </div>
 
-  <div id="queueResult">
-    <p>Click "Refresh Queue" to load appointments.</p>
-  </div>
-</section>
-<!-- Referral Tracking Section -->
-<section class="section" id="referrals">
-  <div class="section-title">
-    <h2>Referral Tracking</h2>
-    <p>
-      Transfer patients between healthcare facilities and track referral status.
-    </p>
-  </div>
+    <div id="fullRecord"></div>
+  </section>
 
-  <div class="record-form-card">
-    <form id="referralForm">
+  <!-- ADD MEDICAL RECORD -->
+  <section class="section">
+    <h2>📝 Add Medical Record</h2>
 
-      <label>Patient ID</label>
-      <input
-        type="number"
-        id="referralPatientId"
-        placeholder="Enter Patient ID"
-        required
-      >
+    <div class="grid">
 
-      <label>From Facility</label>
-      <input
-        type="text"
-        id="fromFacility"
-        placeholder="e.g. Primary Health Centre"
-        required
-      >
-
-      <label>To Facility</label>
-      <input
-        type="text"
-        id="toFacility"
-        placeholder="e.g. District Hospital"
-        required
-      >
-
-      <label>Reason for Referral</label>
-      <textarea
-        id="referralReason"
-        placeholder="Enter reason for referral"
-        rows="4"
-        required
-      ></textarea>
-
-      <button type="submit" class="submit-btn">
-        Create Referral
-      </button>
-
-      <div id="referralMessage"></div>
-
-    </form>
-  </div>
-</section>
-<section class="section" id="add-record">
-  <div class="section-title">
-    <h2>Add Medical Record</h2>
-    <p>Healthcare workers can securely add a patient's medical record.</p>
-  </div>
-
-  <div class="record-form-card">
-    <form id="medicalRecordForm">
-
-      <label>Patient ID</label>
-      <input
-        type="number"
-        id="recordPatientId"
-        placeholder="Enter Patient ID"
-        required
-      >
-
-      <label>Recorded By</label>
-      <input
-        type="text"
-        id="recordedBy"
-        placeholder="Doctor / Health Worker name"
-        required
-      >
-
-      <label>Record Type</label>
-      <select id="recordType" required>
-        <option value="">Select record type</option>
-        <option value="Consultation">Consultation</option>
-        <option value="Diagnosis">Diagnosis</option>
-        <option value="Lab Report">Lab Report</option>
-        <option value="Prescription">Prescription</option>
-        <option value="Follow-up">Follow-up</option>
-      </select>
-
-      <label>Medical Notes</label>
-      <textarea
-        id="recordNotes"
-        placeholder="Enter medical notes"
-        rows="5"
-        required
-      ></textarea>
-
-      <button type="submit" class="submit-btn">
-        Add Medical Record
-      </button>
-
-      <div id="recordMessage"></div>
-
-    </form>
-  </div>
-</section>
-<!-- Patient Registration Modal -->
-<div id="patientModal" class="modal">
-  <div class="modal-box">
-    <button class="close-btn" onclick="closePatientForm()">×</button>
-
-    <h2>Patient Registration</h2>
-    <p class="modal-subtitle">
-      Enter patient details to begin connected healthcare support.
-    </p>
-
-    <form id="patientForm">
-
-      <label>Patient Name</label>
-      <input
-        type="text"
-        id="patientName"
-        placeholder="Enter full name"
-        required
-      >
-
-      <div class="form-row">
-        <div>
-          <label>Age</label>
-          <input
-            type="number"
-            id="patientAge"
-            placeholder="Age"
-            min="1"
-            max="120"
-            required
-          >
-        </div>
-
-        <div>
-          <label>Gender</label>
-          <select id="patientGender" required>
-            <option value="">Select gender</option>
-            <option value="Female">Female</option>
-            <option value="Male">Male</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
+      <div class="form-group">
+        <label>Patient ID *</label>
+        <input id="medicalPatientId" type="number">
       </div>
 
-      <label>Village</label>
-      <input
-        type="text"
-        id="patientVillage"
-        placeholder="Enter village"
-        required
-      >
+      <div class="form-group">
+        <label>Recorded By</label>
+        <input id="recordedBy"
+               placeholder="Doctor / Health Worker">
+      </div>
 
-      <label>Phone Number</label>
-      <input
-        type="tel"
-        id="patientPhone"
-        placeholder="Enter phone number"
-        maxlength="10"
-      >
+      <div class="form-group">
+        <label>Record Type</label>
+        <select id="recordType">
+          <option>General</option>
+          <option>Consultation</option>
+          <option>Diagnosis</option>
+          <option>Laboratory</option>
+          <option>Medication</option>
+          <option>Follow-up</option>
+          <option>Emergency</option>
+        </select>
+      </div>
 
-      <button type="submit" class="submit-btn">
-        Register Patient
-      </button>
+    </div>
 
-      <div id="formMessage"></div>
+    <div class="form-group">
+      <label>Medical Notes *</label>
+      <textarea id="medicalNotes"
+        placeholder="Enter medical information..."></textarea>
+    </div>
 
-    </form>
-  </div>
+    <button class="btn" onclick="addMedicalRecord()">
+      Save Medical Record
+    </button>
+
+    <div id="medicalMessage" class="message"></div>
+  </section>
+
+  <!-- APPOINTMENT -->
+  <section class="section" id="appointment">
+    <h2>📅 Appointment Booking</h2>
+
+    <div class="grid">
+
+      <div class="form-group">
+        <label>Patient ID *</label>
+        <input id="appointmentPatientId" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>Doctor Name</label>
+        <input id="doctorName"
+               placeholder="Doctor name">
+      </div>
+
+      <div class="form-group">
+        <label>Appointment Date *</label>
+        <input id="appointmentDate" type="date">
+      </div>
+
+      <div class="form-group">
+        <label>Appointment Time *</label>
+        <input id="appointmentTime" type="time">
+      </div>
+
+    </div>
+
+    <div class="form-group">
+      <label>Reason</label>
+      <textarea id="appointmentReason"
+        placeholder="Reason for consultation"></textarea>
+    </div>
+
+    <button class="btn" onclick="bookAppointment()">
+      Book Appointment
+    </button>
+
+    <div id="appointmentMessage" class="message"></div>
+  </section>
+
+  <!-- QUEUE -->
+  <section class="section">
+    <h2>🧾 Appointment Queue</h2>
+
+    <div class="form-group">
+      <label>Select Date</label>
+      <input id="queueDate" type="date">
+    </div>
+
+    <button class="btn btn-secondary" onclick="loadQueue()">
+      Load Queue
+    </button>
+
+    <div id="queueResults"></div>
+  </section>
+
+  <!-- REFERRAL -->
+  <section class="section" id="referral">
+    <h2>🔄 Referral Tracking</h2>
+
+    <div class="grid">
+
+      <div class="form-group">
+        <label>Patient ID *</label>
+        <input id="referralPatientId" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>From Facility *</label>
+        <input id="fromFacility"
+               placeholder="PHC / Health Centre">
+      </div>
+
+      <div class="form-group">
+        <label>To Facility *</label>
+        <input id="toFacility"
+               placeholder="District Hospital">
+      </div>
+
+    </div>
+
+    <div class="form-group">
+      <label>Referral Reason *</label>
+      <textarea id="referralReason"
+        placeholder="Reason for referral"></textarea>
+    </div>
+
+    <button class="btn" onclick="createReferral()">
+      Create Referral
+    </button>
+
+    <div id="referralMessage" class="message"></div>
+
+    <hr style="margin:25px 0;border:none;border-top:1px solid #e2e8f0">
+
+    <button class="btn btn-secondary" onclick="loadReferrals()">
+      View Referral Tracking
+    </button>
+
+    <div id="referralResults"></div>
+  </section>
+
+  <!-- FOLLOW UP -->
+  <section class="section" id="followup">
+    <h2>🔔 High-Risk / Follow-up Management</h2>
+
+    <div class="grid">
+
+      <div class="form-group">
+        <label>Patient ID *</label>
+        <input id="followPatientId" type="number">
+      </div>
+
+      <div class="form-group">
+        <label>Follow-up Date *</label>
+        <input id="followDate" type="date">
+      </div>
+
+    </div>
+
+    <div class="form-group">
+      <label>Purpose</label>
+      <input id="followPurpose"
+             placeholder="Chronic care / maternal / child / general">
+    </div>
+
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="followNotes"></textarea>
+    </div>
+
+    <button class="btn" onclick="createFollowUp()">
+      Schedule Follow-up
+    </button>
+
+    <div id="followMessage" class="message"></div>
+
+    <hr style="margin:25px 0;border:none;border-top:1px solid #e2e8f0">
+
+    <button class="btn btn-secondary" onclick="loadFollowUps()">
+      View Follow-ups
+    </button>
+
+    <div id="followResults"></div>
+  </section>
+
+  <!-- EMERGENCY -->
+  <section class="section">
+    <h2>🚨 Emergency Escalation</h2>
+
+    <div class="info-box">
+      <strong>Emergency Support:</strong>
+      If a patient appears seriously unwell, the health worker should
+      immediately follow the local emergency protocol and arrange
+      appropriate medical care or emergency transport.
+    </div>
+
+    <button class="btn btn-danger"
+      onclick="alert('Emergency escalation: Contact local emergency medical services and the nearest appropriate healthcare facility.')">
+      🚨 Emergency Escalation
+    </button>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="section">
+    <h2>🌐 Rural Health Connect</h2>
+
+    <p>
+      A digital platform designed to strengthen healthcare access in
+      rural and underserved communities through patient records,
+      appointments, referrals, follow-up and facility coordination.
+    </p>
+
+    <div class="grid" style="margin-top:18px">
+
+      <div class="info-box">
+        <strong>Multilingual:</strong><br>
+        Marathi • Hindi • English
+      </div>
+
+      <div class="info-box">
+        <strong>Low Connectivity:</strong><br>
+        Designed with lightweight web interfaces for low-bandwidth environments.
+      </div>
+
+      <div class="info-box">
+        <strong>Continuity of Care:</strong><br>
+        Longitudinal patient information and referral tracking.
+      </div>
+
+      <div class="info-box">
+        <strong>Public Health Support:</strong><br>
+        Supports frontline workers and healthcare facilities.
+      </div>
+
+    </div>
+  </section>
+
 </div>
+
+<footer>
+  <strong>Rural Health Connect</strong><br>
+  SIH Healthcare Accessibility Solution<br>
+  Maharashtra
+</footer>
+
 <script>
-  function openPatientForm() {
-    document.getElementById("patientModal").style.display = "flex";
-  }
 
-  function closePatientForm() {
-    document.getElementById("patientModal").style.display = "none";
-  }
+const API = window.location.origin;
 
-  document.getElementById("patientForm").addEventListener("submit", async function(event) {
-    event.preventDefault();
+// =========================================================
+// HELPERS
+// =========================================================
 
-    const message = document.getElementById("formMessage");
-
-    const patient = {
-      name: document.getElementById("patientName").value.trim(),
-      age: document.getElementById("patientAge").value,
-      gender: document.getElementById("patientGender").value,
-      village: document.getElementById("patientVillage").value.trim(),
-      phone: document.getElementById("patientPhone").value.trim()
-    };
-
-    message.textContent = "Registering patient...";
-
-    try {
-      const response = await fetch("/api/patients", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(patient)
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        message.textContent =
-          "Patient registered successfully. ID: " + result.patient_id;
-
-        document.getElementById("patientForm").reset();
-      } else {
-        message.textContent = result.message || "Registration failed.";
-      }
-
-    } catch (error) {
-      message.textContent =
-        "Unable to connect to the healthcare server.";
-    }
+function scrollToSection(id) {
+  document.getElementById(id).scrollIntoView({
+    behavior: "smooth"
   });
+}
 
-  window.addEventListener("click", function(event) {
-    const modal = document.getElementById("patientModal");
+function showMessage(elementId, message, success = true) {
+  const el = document.getElementById(elementId);
 
-    if (event.target === modal) {
-      closePatientForm();
-    }
-  });
-async function searchPatient() {
-  const patientId = document.getElementById("searchPatientId").value;
-  const resultBox = document.getElementById("patientResult");
+  el.className = "message " + (success ? "success" : "error");
+  el.textContent = message;
+}
 
-  if (!patientId) {
-    resultBox.innerHTML = "<p>Please enter a Patient ID.</p>";
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// =========================================================
+// DASHBOARD
+// =========================================================
+
+async function loadDashboard() {
+  try {
+    const response = await fetch(API + "/api/dashboard");
+    const data = await response.json();
+
+    if (!data.success) return;
+
+    document.getElementById("statPatients").textContent =
+      data.statistics.patients;
+
+    document.getElementById("statAppointments").textContent =
+      data.statistics.appointments;
+
+    document.getElementById("statReferrals").textContent =
+      data.statistics.referrals;
+
+    document.getElementById("statPending").textContent =
+      data.statistics.pending_referrals;
+
+    document.getElementById("statRecords").textContent =
+      data.statistics.medical_records;
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// =========================================================
+// REGISTER PATIENT
+// =========================================================
+
+async function registerPatient() {
+
+  const data = {
+    name: document.getElementById("patientName").value.trim(),
+    age: document.getElementById("patientAge").value,
+    gender: document.getElementById("patientGender").value,
+    village: document.getElementById("patientVillage").value.trim(),
+    phone: document.getElementById("patientPhone").value.trim()
+  };
+
+  if (!data.name) {
+    showMessage(
+      "patientMessage",
+      "Please enter patient name",
+      false
+    );
     return;
   }
 
-  resultBox.innerHTML = "<p>Searching patient record...</p>";
-
   try {
-    const response = await fetch(
-      "/api/patients?id=" + encodeURIComponent(patientId)
-    );
 
-    const data = await response.json();
-
-    if (!data.success) {
-      resultBox.innerHTML = "<p>Patient record not found.</p>";
-      return;
-    }
-
-    const patient = data.patient;
-
-    resultBox.innerHTML =
-      '<div class="patient-result-card">' +
-      "<h3>" + patient.name + "</h3>" +
-      "<p><strong>Patient ID:</strong> " + patient.id + "</p>" +
-      "<p><strong>Age:</strong> " + patient.age + "</p>" +
-      "<p><strong>Gender:</strong> " + patient.gender + "</p>" +
-      "<p><strong>Village:</strong> " + patient.village + "</p>" +
-      "<p><strong>Phone:</strong> " + (patient.phone || "Not provided") + "</p>" +
-      "<hr>" +
-      "<h4>Medical Records</h4>" +
-     "<p><strong>Total Records:</strong> " +
-data.medical_records.length +
-"</p>" +
-
-data.medical_records.map(function(record) {
-  return (
-    '<div class="medical-record-item">' +
-    "<p><strong>Record Type:</strong> " +
-    record.record_type +
-    "</p>" +
-
-    "<p><strong>Recorded By:</strong> " +
-    record.recorded_by +
-    "</p>" +
-
-    "<p><strong>Medical Notes:</strong> " +
-    record.notes +
-    "</p>" +
-
-    "<p><strong>Date:</strong> " +
-    record.created_at +
-    "</p>" +
-
-    "</div>"
-  );
-}).join("") +
-      "</div>";
-  } catch (error) {
-    resultBox.innerHTML =
-      "<p>Unable to connect to the healthcare server.</p>";
-  }
-}
-document.getElementById("medicalRecordForm").addEventListener("submit", async function(event) {
-  event.preventDefault();
-
-  const message = document.getElementById("recordMessage");
-
-  const record = {
-    patient_id: document.getElementById("recordPatientId").value,
-    recorded_by: document.getElementById("recordedBy").value.trim(),
-    record_type: document.getElementById("recordType").value,
-    notes: document.getElementById("recordNotes").value.trim()
-  };
-
-  message.textContent = "Saving medical record...";
-
-  try {
-    const response = await fetch("/api/medical-records", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(record)
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      message.textContent =
-        "Medical record added successfully. Record ID: " + result.record_id;
-
-      document.getElementById("medicalRecordForm").reset();
-    } else {
-      message.textContent =
-        result.message || "Unable to add medical record.";
-    }
-
-  } catch (error) {
-    message.textContent =
-      "Unable to connect to the healthcare server.";
-  }
-});
-document.getElementById("appointmentForm").addEventListener("submit", async function(event) {
-  event.preventDefault();
-
-  const message = document.getElementById("appointmentMessage");
-
-  const appointment = {
-    patient_id: document.getElementById("appointmentPatientId").value,
-    doctor_name: document.getElementById("appointmentDoctor").value.trim(),
-    appointment_date: document.getElementById("appointmentDate").value,
-    appointment_time: document.getElementById("appointmentTime").value,
-    reason: document.getElementById("appointmentReason").value.trim()
-  };
-
-  message.textContent = "Booking appointment...";
-
-  try {
-    const response = await fetch("/api/appointments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(appointment)
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      message.textContent =
-        "Appointment booked successfully. Appointment ID: " +
-        result.appointment_id;
-
-      document.getElementById("appointmentForm").reset();
-    } else {
-      message.textContent =
-        result.message || "Unable to book appointment.";
-    }
-
-  } catch (error) {
-    message.textContent =
-      "Unable to connect to the healthcare server.";
-  }
-});
-async function loadQueue() {
-  const queueResult = document.getElementById("queueResult");
-
-  queueResult.innerHTML = "<p>Loading appointment queue...</p>";
-
-  try {
-    const response = await fetch("/api/appointments");
-    const data = await response.json();
-
-    if (!data.success || data.appointments.length === 0) {
-      queueResult.innerHTML =
-        "<p>No appointments found.</p>";
-      return;
-    }
-
-    let html =
-      '<div class="queue-list">';
-
-    data.appointments.forEach(function(appointment, index) {
-      html +=
-        '<div class="queue-card">' +
-        "<h3>Queue #" + (index + 1) + "</h3>" +
-        "<p><strong>Patient:</strong> " +
-        (appointment.patient_name || "Unknown") +
-        "</p>" +
-        "<p><strong>Patient ID:</strong> " +
-        appointment.patient_id +
-        "</p>" +
-        "<p><strong>Doctor:</strong> " +
-        (appointment.doctor_name || "Not assigned") +
-        "</p>" +
-        "<p><strong>Date:</strong> " +
-        appointment.appointment_date +
-        "</p>" +
-        "<p><strong>Time:</strong> " +
-        appointment.appointment_time +
-        "</p>" +
-        "<p><strong>Status:</strong> " +
-        appointment.status +
-        "</p>" +
-        "</div>";
-    });
-
-    html += "</div>";
-
-    queueResult.innerHTML = html;
-
-  } catch (error) {
-    queueResult.innerHTML =
-      "<p>Unable to load appointment queue.</p>";
-  }
-}
-document.getElementById("referralForm").addEventListener("submit", async function (event) {
-  event.preventDefault();
-
-  const message = document.getElementById("referralMessage");
-
-  const data = {
-    patient_id: document.getElementById("referralPatientId").value,
-    from_facility: document.getElementById("fromFacility").value,
-    to_facility: document.getElementById("toFacility").value,
-    reason: document.getElementById("referralReason").value
-  };
-
-  message.textContent = "Creating referral...";
-
-  try {
-    const response = await fetch("/api/referrals", {
+    const response = await fetch(API + "/api/patients", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1720,25 +1628,1006 @@ document.getElementById("referralForm").addEventListener("submit", async functio
     const result = await response.json();
 
     if (result.success) {
-      message.textContent =
-        "Referral created successfully. Referral ID: " + result.referral_id;
 
-      document.getElementById("referralForm").reset();
+      showMessage(
+        "patientMessage",
+        "Patient registered successfully. Patient ID: " +
+        result.patient_id
+      );
+
+      document.getElementById("patientName").value = "";
+      document.getElementById("patientAge").value = "";
+      document.getElementById("patientGender").value = "";
+      document.getElementById("patientVillage").value = "";
+      document.getElementById("patientPhone").value = "";
+
+      loadDashboard();
+
     } else {
-      message.textContent = result.message;
+      showMessage(
+        "patientMessage",
+        result.message || "Registration failed",
+        false
+      );
     }
+
   } catch (error) {
-    message.textContent = "Unable to create referral.";
+    showMessage(
+      "patientMessage",
+      "Server error. Please try again.",
+      false
+    );
   }
+}
+
+// =========================================================
+// SEARCH PATIENT
+// =========================================================
+
+async function searchPatient() {
+
+  const id = document.getElementById("searchPatientId").value.trim();
+  const name = document.getElementById("searchPatientName").value.trim();
+
+  if (!id && !name) {
+    document.getElementById("patientResults").innerHTML =
+      '<div class="message error">Enter Patient ID or Name</div>';
+    return;
+  }
+
+  try {
+
+    let url = API + "/api/patients?";
+
+    if (id) {
+      url += "id=" + encodeURIComponent(id);
+    } else {
+      url += "name=" + encodeURIComponent(name);
+    }
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const container = document.getElementById("patientResults");
+
+    if (!data.success || data.patients.length === 0) {
+      container.innerHTML =
+        '<div class="message error">No patient found</div>';
+      return;
+    }
+
+    container.innerHTML = data.patients.map(patient => `
+      <div class="patient-card">
+        <h3>${escapeHtml(patient.name)}</h3>
+
+        <p><strong>Patient ID:</strong>
+          ${escapeHtml(patient.id)}
+        </p>
+
+        <p><strong>Age:</strong>
+          ${escapeHtml(patient.age || "N/A")}
+        </p>
+
+        <p><strong>Gender:</strong>
+          ${escapeHtml(patient.gender || "N/A")}
+        </p>
+
+        <p><strong>Village:</strong>
+          ${escapeHtml(patient.village || "N/A")}
+        </p>
+
+        <p><strong>Phone:</strong>
+          ${escapeHtml(patient.phone || "N/A")}
+        </p>
+
+        <br>
+
+        <button class="btn"
+          onclick="openPatientRecord(${patient.id})">
+          View Full Medical Report
+        </button>
+      </div>
+    `).join("");
+
+  } catch (error) {
+
+    document.getElementById("patientResults").innerHTML =
+      '<div class="message error">Unable to search patient</div>';
+  }
+}
+
+function openPatientRecord(id) {
+
+  document.getElementById("recordPatientId").value = id;
+
+  loadPatientRecord();
+
+  scrollToSection("records");
+}
+
+// =========================================================
+// FULL PATIENT RECORD
+// =========================================================
+
+async function loadPatientRecord() {
+
+  const patientId =
+    document.getElementById("recordPatientId").value.trim();
+
+  if (!patientId) {
+    document.getElementById("fullRecord").innerHTML =
+      '<div class="message error">Enter Patient ID</div>';
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      API + "/api/patient-record?patient_id=" +
+      encodeURIComponent(patientId)
+    );
+
+    const data = await response.json();
+
+    if (!data.success || !data.patient) {
+      document.getElementById("fullRecord").innerHTML =
+        '<div class="message error">Patient not found</div>';
+      return;
+    }
+
+    const patient = data.patient;
+
+    let html = `
+      <div class="patient-card">
+
+        <h3>👤 ${escapeHtml(patient.name)}</h3>
+
+        <p><strong>Patient ID:</strong>
+          ${escapeHtml(patient.id)}
+        </p>
+
+        <p><strong>Age:</strong>
+          ${escapeHtml(patient.age || "N/A")}
+        </p>
+
+        <p><strong>Gender:</strong>
+          ${escapeHtml(patient.gender || "N/A")}
+        </p>
+
+        <p><strong>Village:</strong>
+          ${escapeHtml(patient.village || "N/A")}
+        </p>
+
+        <p><strong>Phone:</strong>
+          ${escapeHtml(patient.phone || "N/A")}
+        </p>
+
+      </div>
+
+      <h3 style="margin-top:25px;color:#0f766e">
+        📋 Medical Records
+      </h3>
+    `;
+
+    if (data.medical_records.length === 0) {
+
+      html += `
+        <div class="info-box">
+          No medical records available.
+        </div>
+      `;
+
+    } else {
+
+      html += data.medical_records.map(record => `
+        <div class="record">
+
+          <strong>
+            ${escapeHtml(record.record_type || "General")}
+          </strong>
+
+          <p>${escapeHtml(record.notes)}</p>
+
+          <small>
+            Recorded by:
+            ${escapeHtml(record.recorded_by || "N/A")}
+            |
+            ${escapeHtml(record.created_at || "")}
+          </small>
+
+        </div>
+      `).join("");
+    }
+
+    html += `
+      <h3 style="margin-top:25px;color:#0f766e">
+        📅 Appointments
+      </h3>
+    `;
+
+    if (data.appointments.length === 0) {
+
+      html += `
+        <div class="info-box">
+          No appointments available.
+        </div>
+      `;
+
+    } else {
+
+      html += `
+        <div class="table-wrapper">
+        <table>
+          <tr>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Doctor</th>
+            <th>Status</th>
+            <th>Reason</th>
+          </tr>
+
+          ${data.appointments.map(a => `
+            <tr>
+              <td>${escapeHtml(a.appointment_date)}</td>
+              <td>${escapeHtml(a.appointment_time)}</td>
+              <td>${escapeHtml(a.doctor_name || "N/A")}</td>
+              <td>${escapeHtml(a.status)}</td>
+              <td>${escapeHtml(a.reason || "N/A")}</td>
+            </tr>
+          `).join("")}
+
+        </table>
+        </div>
+      `;
+    }
+
+    html += `
+      <h3 style="margin-top:25px;color:#0f766e">
+        🔄 Referrals
+      </h3>
+    `;
+
+    if (data.referrals.length === 0) {
+
+      html += `
+        <div class="info-box">
+          No referrals available.
+        </div>
+      `;
+
+    } else {
+
+      html += data.referrals.map(r => `
+        <div class="record">
+
+          <strong>
+            ${escapeHtml(r.from_facility)}
+            →
+            ${escapeHtml(r.to_facility)}
+          </strong>
+
+          <p>${escapeHtml(r.reason)}</p>
+
+          <span class="badge ${
+            r.status === "completed"
+              ? "completed"
+              : "pending"
+          }">
+            ${escapeHtml(r.status)}
+          </span>
+
+        </div>
+      `).join("");
+    }
+
+    html += `
+      <h3 style="margin-top:25px;color:#0f766e">
+        🔔 Follow-ups
+      </h3>
+    `;
+
+    if (data.follow_ups.length === 0) {
+
+      html += `
+        <div class="info-box">
+          No follow-ups available.
+        </div>
+      `;
+
+    } else {
+
+      html += data.follow_ups.map(f => `
+        <div class="record">
+
+          <strong>
+            ${escapeHtml(f.follow_up_date)}
+          </strong>
+
+          <p>
+            ${escapeHtml(f.purpose || "General follow-up")}
+          </p>
+
+          <small>
+            ${escapeHtml(f.notes || "")}
+          </small>
+
+        </div>
+      `).join("");
+    }
+
+    document.getElementById("fullRecord").innerHTML = html;
+
+  } catch (error) {
+
+    document.getElementById("fullRecord").innerHTML =
+      '<div class="message error">Unable to load medical report</div>';
+  }
+}
+
+// =========================================================
+// ADD MEDICAL RECORD
+// =========================================================
+
+async function addMedicalRecord() {
+
+  const data = {
+    patient_id:
+      document.getElementById("medicalPatientId").value,
+    recorded_by:
+      document.getElementById("recordedBy").value.trim(),
+    record_type:
+      document.getElementById("recordType").value,
+    notes:
+      document.getElementById("medicalNotes").value.trim()
+  };
+
+  if (!data.patient_id || !data.notes) {
+
+    showMessage(
+      "medicalMessage",
+      "Patient ID and medical notes are required",
+      false
+    );
+
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      API + "/api/medical-records",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+
+      showMessage(
+        "medicalMessage",
+        "Medical record saved successfully"
+      );
+
+      document.getElementById("medicalNotes").value = "";
+
+      loadDashboard();
+
+    } else {
+
+      showMessage(
+        "medicalMessage",
+        result.message || "Unable to save record",
+        false
+      );
+    }
+
+  } catch (error) {
+
+    showMessage(
+      "medicalMessage",
+      "Server error",
+      false
+    );
+  }
+}
+
+// =========================================================
+// BOOK APPOINTMENT
+// =========================================================
+
+async function bookAppointment() {
+
+  const data = {
+    patient_id:
+      document.getElementById("appointmentPatientId").value,
+
+    doctor_name:
+      document.getElementById("doctorName").value.trim(),
+
+    appointment_date:
+      document.getElementById("appointmentDate").value,
+
+    appointment_time:
+      document.getElementById("appointmentTime").value,
+
+    reason:
+      document.getElementById("appointmentReason").value.trim()
+  };
+
+  if (
+    !data.patient_id ||
+    !data.appointment_date ||
+    !data.appointment_time
+  ) {
+
+    showMessage(
+      "appointmentMessage",
+      "Patient ID, date and time are required",
+      false
+    );
+
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      API + "/api/appointments",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+
+      showMessage(
+        "appointmentMessage",
+        "Appointment booked successfully. ID: " +
+        result.appointment_id
+      );
+
+      document.getElementById("appointmentReason").value = "";
+
+      loadDashboard();
+
+    } else {
+
+      showMessage(
+        "appointmentMessage",
+        result.message || "Booking failed",
+        false
+      );
+    }
+
+  } catch (error) {
+
+    showMessage(
+      "appointmentMessage",
+      "Server error",
+      false
+    );
+  }
+}
+
+// =========================================================
+// QUEUE
+// =========================================================
+
+async function loadQueue() {
+
+  const date =
+    document.getElementById("queueDate").value;
+
+  try {
+
+    let url = API + "/api/appointments";
+
+    if (date) {
+      url += "?date=" + encodeURIComponent(date);
+    }
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error();
+    }
+
+    const container =
+      document.getElementById("queueResults");
+
+    if (data.appointments.length === 0) {
+
+      container.innerHTML =
+        '<div class="info-box">No appointments found.</div>';
+
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="table-wrapper">
+      <table>
+
+        <tr>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Reason</th>
+          <th>Status</th>
+        </tr>
+
+        ${data.appointments.map(a => `
+          <tr>
+
+            <td>
+              ${escapeHtml(a.patient_name || "Unknown")}
+              <br>
+              <small>ID: ${escapeHtml(a.patient_id)}</small>
+            </td>
+
+            <td>
+              ${escapeHtml(a.doctor_name || "Not assigned")}
+            </td>
+
+            <td>
+              ${escapeHtml(a.appointment_date)}
+            </td>
+
+            <td>
+              ${escapeHtml(a.appointment_time)}
+            </td>
+
+            <td>
+              ${escapeHtml(a.reason || "N/A")}
+            </td>
+
+            <td>
+              <span class="badge ${
+                a.status === "completed"
+                  ? "completed"
+                  : "pending"
+              }">
+                ${escapeHtml(a.status)}
+              </span>
+
+              <br><br>
+
+              <button class="btn btn-success"
+                onclick="updateAppointmentStatus(${a.id}, 'completed')">
+                Complete
+              </button>
+            </td>
+
+          </tr>
+        `).join("")}
+
+      </table>
+      </div>
+    `;
+
+  } catch (error) {
+
+    document.getElementById("queueResults").innerHTML =
+      '<div class="message error">Unable to load queue</div>';
+  }
+}
+
+async function updateAppointmentStatus(id, status) {
+
+  try {
+
+    const response = await fetch(
+      API + "/api/appointments/status",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          id,
+          status
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+      loadQueue();
+      loadDashboard();
+    }
+
+  } catch (error) {
+    alert("Unable to update appointment");
+  }
+}
+
+// =========================================================
+// REFERRAL
+// =========================================================
+
+async function createReferral() {
+
+  const data = {
+    patient_id:
+      document.getElementById("referralPatientId").value,
+
+    from_facility:
+      document.getElementById("fromFacility").value.trim(),
+
+    to_facility:
+      document.getElementById("toFacility").value.trim(),
+
+    reason:
+      document.getElementById("referralReason").value.trim()
+  };
+
+  if (
+    !data.patient_id ||
+    !data.from_facility ||
+    !data.to_facility ||
+    !data.reason
+  ) {
+
+    showMessage(
+      "referralMessage",
+      "Please fill all referral fields",
+      false
+    );
+
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      API + "/api/referrals",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+
+      showMessage(
+        "referralMessage",
+        "Referral created successfully. ID: " +
+        result.referral_id
+      );
+
+      document.getElementById("referralReason").value = "";
+
+      loadReferrals();
+      loadDashboard();
+
+    } else {
+
+      showMessage(
+        "referralMessage",
+        result.message || "Referral failed",
+        false
+      );
+    }
+
+  } catch (error) {
+
+    showMessage(
+      "referralMessage",
+      "Server error",
+      false
+    );
+  }
+}
+
+async function loadReferrals() {
+
+  try {
+
+    const response =
+      await fetch(API + "/api/referrals");
+
+    const data = await response.json();
+
+    if (!data.success) return;
+
+    const container =
+      document.getElementById("referralResults");
+
+    if (data.referrals.length === 0) {
+
+      container.innerHTML =
+        '<div class="info-box">No referrals available.</div>';
+
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="table-wrapper">
+      <table>
+
+        <tr>
+          <th>Patient</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Reason</th>
+          <th>Status</th>
+        </tr>
+
+        ${data.referrals.map(r => `
+          <tr>
+
+            <td>
+              ${escapeHtml(r.patient_name || "Unknown")}
+              <br>
+              <small>ID: ${escapeHtml(r.patient_id)}</small>
+            </td>
+
+            <td>${escapeHtml(r.from_facility)}</td>
+
+            <td>${escapeHtml(r.to_facility)}</td>
+
+            <td>${escapeHtml(r.reason)}</td>
+
+            <td>
+
+              <span class="badge ${
+                r.status === "completed"
+                  ? "completed"
+                  : "pending"
+              }">
+                ${escapeHtml(r.status)}
+              </span>
+
+              <br><br>
+
+              ${
+                r.status !== "completed"
+                  ? `
+                    <button class="btn btn-success"
+                      onclick="updateReferralStatus(${r.id})">
+                      Mark Completed
+                    </button>
+                  `
+                  : ""
+              }
+
+            </td>
+
+          </tr>
+        `).join("")}
+
+      </table>
+      </div>
+    `;
+
+  } catch (error) {
+
+    document.getElementById("referralResults").innerHTML =
+      '<div class="message error">Unable to load referrals</div>';
+  }
+}
+
+async function updateReferralStatus(id) {
+
+  try {
+
+    const response = await fetch(
+      API + "/api/referrals/status",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          id,
+          status: "completed"
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+      loadReferrals();
+      loadDashboard();
+    }
+
+  } catch (error) {
+
+    alert("Unable to update referral");
+  }
+}
+
+// =========================================================
+// FOLLOW-UP
+// =========================================================
+
+async function createFollowUp() {
+
+  const data = {
+    patient_id:
+      document.getElementById("followPatientId").value,
+
+    follow_up_date:
+      document.getElementById("followDate").value,
+
+    purpose:
+      document.getElementById("followPurpose").value.trim(),
+
+    notes:
+      document.getElementById("followNotes").value.trim()
+  };
+
+  if (!data.patient_id || !data.follow_up_date) {
+
+    showMessage(
+      "followMessage",
+      "Patient ID and follow-up date are required",
+      false
+    );
+
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      API + "/api/follow-ups",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+
+      showMessage(
+        "followMessage",
+        "Follow-up scheduled successfully"
+      );
+
+      document.getElementById("followPurpose").value = "";
+      document.getElementById("followNotes").value = "";
+
+      loadFollowUps();
+
+    } else {
+
+      showMessage(
+        "followMessage",
+        result.message || "Unable to schedule follow-up",
+        false
+      );
+    }
+
+  } catch (error) {
+
+    showMessage(
+      "followMessage",
+      "Server error",
+      false
+    );
+  }
+}
+
+async function loadFollowUps() {
+
+  try {
+
+    const response =
+      await fetch(API + "/api/follow-ups");
+
+    const data = await response.json();
+
+    if (!data.success) return;
+
+    const container =
+      document.getElementById("followResults");
+
+    if (data.follow_ups.length === 0) {
+
+      container.innerHTML =
+        '<div class="info-box">No follow-ups available.</div>';
+
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="table-wrapper">
+      <table>
+
+        <tr>
+          <th>Patient</th>
+          <th>Date</th>
+          <th>Purpose</th>
+          <th>Notes</th>
+          <th>Status</th>
+        </tr>
+
+        ${data.follow_ups.map(f => `
+          <tr>
+
+            <td>
+              ${escapeHtml(f.patient_name || "Unknown")}
+              <br>
+              <small>ID: ${escapeHtml(f.patient_id)}</small>
+            </td>
+
+            <td>${escapeHtml(f.follow_up_date)}</td>
+
+            <td>${escapeHtml(f.purpose || "General")}</td>
+
+            <td>${escapeHtml(f.notes || "N/A")}</td>
+
+            <td>
+              <span class="badge pending">
+                ${escapeHtml(f.status)}
+              </span>
+            </td>
+
+          </tr>
+        `).join("")}
+
+      </table>
+      </div>
+    `;
+
+  } catch (error) {
+
+    document.getElementById("followResults").innerHTML =
+      '<div class="message error">Unable to load follow-ups</div>';
+  }
+}
+
+// =========================================================
+// INITIAL LOAD
+// =========================================================
+
+window.addEventListener("load", () => {
+
+  loadDashboard();
+
+  const today =
+    new Date().toISOString().split("T")[0];
+
+  document.getElementById("queueDate").value = today;
+
+  document.getElementById("appointmentDate").value = today;
+
 });
+
 </script>
+
 </body>
-</html>
-`;
+</html>`;
 
     return new Response(html, {
       headers: {
-        "Content-Type": "text/html; charset=UTF-8"
+        "Content-Type": "text/html;charset=UTF-8"
       }
     });
   }
