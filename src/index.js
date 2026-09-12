@@ -4,20 +4,23 @@ export default {
 
     // Backend test API
     if (url.pathname === "/api/test") {
-  return new Response(
-    JSON.stringify({  success: true,
-      message: "Rural Health Connect backend is working"
-    })    
-      headers: {
-        "Content-Type": "application/json"
-      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Rural Health Connect backend is working"
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
     }
-  );
-}
-        // Patient registration API
-        // Get patient by ID
+
+    // Patient registration API
+    // Get patient by ID
     if (url.pathname === "/api/medical-records" && request.method === "POST") {
-  try {
+      try {
     const data = await request.json();
 
     if (!data.patient_id || !data.recorded_by || !data.record_type || !data.notes) {
