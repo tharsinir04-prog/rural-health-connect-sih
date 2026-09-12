@@ -118,6 +118,72 @@ export default {
   }
 } 
     if (url.pathname === "/api/appointments" && request.method === "POST") {
+// Create Referral API
+if (url.pathname === "/api/referrals" && request.method === "POST") {
+  try {
+    const data = await request.json();
+
+    if (
+      !data.patient_id ||
+      !data.from_facility ||
+      !data.to_facility ||
+      !data.reason
+    ) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Patient ID, from facility, to facility and reason are required"
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    }
+
+    const result = await env.DB.prepare(
+      `INSERT INTO referrals
+      (patient_id, from_facility, to_facility, reason)
+      VALUES (?, ?, ?, ?)`
+    )
+      .bind(
+        data.patient_id,
+        data.from_facility,
+        data.to_facility,
+        data.reason
+      )
+      .run();
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Referral created successfully",
+        referral_id: result.meta.last_row_id
+      }),
+      {
+        status: 201,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Unable to create referral"
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
+}
   try {
     const data = await request.json();
 
