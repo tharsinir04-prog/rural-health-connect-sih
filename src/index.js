@@ -5,11 +5,9 @@ export default {
     // Backend test API
     if (url.pathname === "/api/test") {
   return new Response(
-    JSON.stringify({
-      success: true,
+    JSON.stringify({  success: true,
       message: "Rural Health Connect backend is working"
-    }),
-    {
+    })    {
       headers: {
         "Content-Type": "application/json"
       }
@@ -1159,6 +1157,23 @@ export default {
   </div>
 </section>
   <!-- Add Medical Record Section -->
+  <!-- Queue Management Section -->
+<section class="section" id="queue">
+  <div class="section-title">
+    <h2>Appointment Queue</h2>
+    <p>View scheduled patients and their current consultation status.</p>
+  </div>
+
+  <div class="queue-actions">
+    <button class="btn primary" onclick="loadQueue()">
+      Refresh Queue
+    </button>
+  </div>
+
+  <div id="queueResult">
+    <p>Click "Refresh Queue" to load appointments.</p>
+  </div>
+</section>
 <section class="section" id="add-record">
   <div class="section-title">
     <h2>Add Medical Record</h2>
@@ -1486,6 +1501,58 @@ document.getElementById("appointmentForm").addEventListener("submit", async func
       "Unable to connect to the healthcare server.";
   }
 });
+async function loadQueue() {
+  const queueResult = document.getElementById("queueResult");
+
+  queueResult.innerHTML = "<p>Loading appointment queue...</p>";
+
+  try {
+    const response = await fetch("/api/appointments");
+    const data = await response.json();
+
+    if (!data.success || data.appointments.length === 0) {
+      queueResult.innerHTML =
+        "<p>No appointments found.</p>";
+      return;
+    }
+
+    let html =
+      '<div class="queue-list">';
+
+    data.appointments.forEach(function(appointment, index) {
+      html +=
+        '<div class="queue-card">' +
+        "<h3>Queue #" + (index + 1) + "</h3>" +
+        "<p><strong>Patient:</strong> " +
+        (appointment.patient_name || "Unknown") +
+        "</p>" +
+        "<p><strong>Patient ID:</strong> " +
+        appointment.patient_id +
+        "</p>" +
+        "<p><strong>Doctor:</strong> " +
+        (appointment.doctor_name || "Not assigned") +
+        "</p>" +
+        "<p><strong>Date:</strong> " +
+        appointment.appointment_date +
+        "</p>" +
+        "<p><strong>Time:</strong> " +
+        appointment.appointment_time +
+        "</p>" +
+        "<p><strong>Status:</strong> " +
+        appointment.status +
+        "</p>" +
+        "</div>";
+    });
+
+    html += "</div>";
+
+    queueResult.innerHTML = html;
+
+  } catch (error) {
+    queueResult.innerHTML =
+      "<p>Unable to load appointment queue.</p>";
+  }
+}
 </script>
 </body>
 </html>
