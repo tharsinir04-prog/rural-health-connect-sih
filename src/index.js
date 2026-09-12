@@ -78,6 +78,44 @@ export default {
     );
   }
 }
+   if (url.pathname === "/api/appointments" && request.method === "GET") {
+  try {
+    const appointments = await env.DB.prepare(
+      `SELECT
+        appointments.*,
+        patients.name AS patient_name
+      FROM appointments
+      LEFT JOIN patients
+        ON appointments.patient_id = patients.id
+      ORDER BY appointment_date ASC, appointment_time ASC`
+    ).all();
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        appointments: appointments.results
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Unable to retrieve appointments"
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
+} 
     if (url.pathname === "/api/appointments" && request.method === "POST") {
   try {
     const data = await request.json();
