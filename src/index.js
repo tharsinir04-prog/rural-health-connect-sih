@@ -37,25 +37,49 @@ export default {
         }
       );
     }
+// Create Appointment API
+if (url.pathname === "/api/appointments" && request.method === "POST") {
+  try {
+    const data = await request.json();
+
+    if (
+      !data.patient_id ||
+      !data.appointment_date ||
+      !data.appointment_time
+    ) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Patient ID, appointment date and time are required"
+        }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
+      );
+    }
 
     const result = await env.DB.prepare(
-      `INSERT INTO medical_records
-      (patient_id, recorded_by, record_type, notes)
-      VALUES (?, ?, ?, ?)`
+      `INSERT INTO appointments
+      (patient_id, doctor_name, appointment_date, appointment_time, reason)
+      VALUES (?, ?, ?, ?, ?)`
     )
       .bind(
         data.patient_id,
-        data.recorded_by,
-        data.record_type,
-        data.notes
+        data.doctor_name || null,
+        data.appointment_date,
+        data.appointment_time,
+        data.reason || null
       )
       .run();
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Medical record added successfully",
-        record_id: result.meta.last_row_id
+        message: "Appointment booked successfully",
+        appointment_id: result.meta.last_row_id
       }),
       {
         status: 201,
@@ -63,6 +87,23 @@ export default {
           "Content-Type": "application/json"
         }
       }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message: "Unable to book appointment"
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  }
+}
+ 
     );
   } catch (error) {
     return new Response(
