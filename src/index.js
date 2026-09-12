@@ -7,7 +7,7 @@ export default {
   return new Response(
     JSON.stringify({  success: true,
       message: "Rural Health Connect backend is working"
-    })    {
+    })    
       headers: {
         "Content-Type": "application/json"
       }
