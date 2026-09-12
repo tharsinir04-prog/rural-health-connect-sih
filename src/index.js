@@ -1065,6 +1065,61 @@ export default {
     <span>© 2026 Rural Health Connect</span>
     <span>Built for accessible and connected rural healthcare</span>
   </footer>
+  <!-- Appointment Booking Section -->
+<section class="section" id="appointments">
+  <div class="section-title">
+    <h2>Book Appointment</h2>
+    <p>Schedule a consultation with a healthcare professional.</p>
+  </div>
+
+  <div class="record-form-card">
+    <form id="appointmentForm">
+
+      <label>Patient ID</label>
+      <input
+        type="number"
+        id="appointmentPatientId"
+        placeholder="Enter Patient ID"
+        required
+      >
+
+      <label>Doctor Name</label>
+      <input
+        type="text"
+        id="appointmentDoctor"
+        placeholder="Enter doctor name"
+      >
+
+      <label>Appointment Date</label>
+      <input
+        type="date"
+        id="appointmentDate"
+        required
+      >
+
+      <label>Appointment Time</label>
+      <input
+        type="time"
+        id="appointmentTime"
+        required
+      >
+
+      <label>Reason for Consultation</label>
+      <textarea
+        id="appointmentReason"
+        placeholder="Enter reason for consultation"
+        rows="4"
+      ></textarea>
+
+      <button type="submit" class="submit-btn">
+        Book Appointment
+      </button>
+
+      <div id="appointmentMessage"></div>
+
+    </form>
+  </div>
+</section>
   <!-- Add Medical Record Section -->
 <section class="section" id="add-record">
   <div class="section-title">
@@ -1344,6 +1399,48 @@ document.getElementById("medicalRecordForm").addEventListener("submit", async fu
     } else {
       message.textContent =
         result.message || "Unable to add medical record.";
+    }
+
+  } catch (error) {
+    message.textContent =
+      "Unable to connect to the healthcare server.";
+  }
+});
+document.getElementById("appointmentForm").addEventListener("submit", async function(event) {
+  event.preventDefault();
+
+  const message = document.getElementById("appointmentMessage");
+
+  const appointment = {
+    patient_id: document.getElementById("appointmentPatientId").value,
+    doctor_name: document.getElementById("appointmentDoctor").value.trim(),
+    appointment_date: document.getElementById("appointmentDate").value,
+    appointment_time: document.getElementById("appointmentTime").value,
+    reason: document.getElementById("appointmentReason").value.trim()
+  };
+
+  message.textContent = "Booking appointment...";
+
+  try {
+    const response = await fetch("/api/appointments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(appointment)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      message.textContent =
+        "Appointment booked successfully. Appointment ID: " +
+        result.appointment_id;
+
+      document.getElementById("appointmentForm").reset();
+    } else {
+      message.textContent =
+        result.message || "Unable to book appointment.";
     }
 
   } catch (error) {
