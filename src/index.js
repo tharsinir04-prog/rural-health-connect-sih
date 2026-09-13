@@ -2551,8 +2551,7 @@ async function loadAppointments(){
 
           '<button class="secondary" onclick="appointmentStatus(' +
           Number(a.id) +
-       ',\'completed\')">' +
-
+      ',&quot;completed&quot;)">' +
           "Complete" +
 
           "</button>" +
