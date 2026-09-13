@@ -1,56 +1,89 @@
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type"
 };
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json; charset=UTF-8" }
+    headers: {
+      ...CORS,
+      "Content-Type": "application/json; charset=UTF-8"
+    }
   });
 }
 
-function esc(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 async function readJson(request) {
-  try { return await request.json(); } catch { return null; }
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
 }
 
 async function api(request, env, url) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS });
+  }
 
   try {
     if (url.pathname === "/api/test" && request.method === "GET") {
-      return json({ success: true, message: "Rural Health Connect API is working" });
+      return json({
+        success: true,
+        message: "Rural Health Connect API is working"
+      });
+    }
+
+    if (url.pathname === "/api/dashboard" && request.method === "GET") {
+      const patients = await env.DB
+        .prepare("SELECT COUNT(*) AS count FROM patients")
+        .first();
+
+      const appointments = await env.DB
+        .prepare("SELECT COUNT(*) AS count FROM appointments WHERE status != 'completed' AND status != 'cancelled'")
+        .first();
+
+      const referrals = await env.DB
+        .prepare("SELECT COUNT(*) AS count FROM referrals WHERE status != 'completed'")
+        .first();
+
+      const followups = await env.DB
+        .prepare("SELECT COUNT(*) AS count FROM follow_ups WHERE status != 'completed'")
+        .first();
+
+      return json({
+        success: true,
+        patients: Number(patients?.count || 0),
+        appointments: Number(appointments?.count || 0),
+        referrals: Number(referrals?.count || 0),
+        follow_ups: Number(followups?.count || 0)
+      });
     }
 
     if (url.pathname === "/api/patients" && request.method === "POST") {
-      const data = await readJson(request);
-      if (!data || !String(data.name || "").trim()) {
-        return json({ success: false, message: "Patient name is required" }, 400);
+      const d = await readJson(request);
+
+      if (!d || !String(d.name || "").trim()) {
+        return json({
+          success: false,
+          message: "Patient name is required."
+        }, 400);
       }
 
       const result = await env.DB.prepare(
         "INSERT INTO patients (name, age, gender, village, phone) VALUES (?, ?, ?, ?, ?)"
       ).bind(
-        String(data.name).trim(),
-        data.age === "" || data.age == null ? null : Number(data.age),
-        data.gender || null,
-        data.village || null,
-        data.phone || null
+        String(d.name).trim(),
+        d.age === "" || d.age == null ? null : Number(d.age),
+        d.gender || null,
+        d.village || null,
+        d.phone || null
       ).run();
 
       return json({
         success: true,
-        message: "Patient registered successfully",
+        message: "Patient registered successfully.",
         patient_id: result.meta.last_row_id
       }, 201);
     }
@@ -58,55 +91,72 @@ async function api(request, env, url) {
     if (url.pathname === "/api/patients" && request.method === "GET") {
       const id = url.searchParams.get("id");
       const name = url.searchParams.get("name");
+
       let result;
 
       if (id) {
-        result = await env.DB.prepare(
-          "SELECT * FROM patients WHERE id = ? ORDER BY id DESC"
-        ).bind(id).all();
+        result = await env.DB
+          .prepare("SELECT * FROM patients WHERE id = ?")
+          .bind(id)
+          .all();
       } else if (name) {
-        result = await env.DB.prepare(
-          "SELECT * FROM patients WHERE name LIKE ? ORDER BY id DESC"
-        ).bind("%" + name + "%").all();
+        result = await env.DB
+          .prepare("SELECT * FROM patients WHERE name LIKE ? ORDER BY id DESC")
+          .bind("%" + name + "%")
+          .all();
       } else {
-        result = await env.DB.prepare(
-          "SELECT * FROM patients ORDER BY id DESC LIMIT 100"
-        ).all();
+        result = await env.DB
+          .prepare("SELECT * FROM patients ORDER BY id DESC LIMIT 100")
+          .all();
       }
 
-      return json({ success: true, patients: result.results || [] });
+      return json({
+        success: true,
+        patients: result.results || []
+      });
     }
 
     if (url.pathname === "/api/patient-record" && request.method === "GET") {
       const patientId = url.searchParams.get("patient_id");
 
       if (!patientId) {
-        return json({ success: false, message: "Patient ID is required" }, 400);
+        return json({
+          success: false,
+          message: "Patient ID is required."
+        }, 400);
       }
 
-      const patient = await env.DB.prepare(
-        "SELECT * FROM patients WHERE id = ?"
-      ).bind(patientId).first();
+      const patient = await env.DB
+        .prepare("SELECT * FROM patients WHERE id = ?")
+        .bind(patientId)
+        .first();
 
       if (!patient) {
-        return json({ success: false, message: "Patient not found" }, 404);
+        return json({
+          success: false,
+          message: "Patient not found."
+        }, 404);
       }
 
-      const records = await env.DB.prepare(
-        "SELECT * FROM medical_records WHERE patient_id = ? ORDER BY id DESC"
-      ).bind(patientId).all();
+      const records = await env.DB
+        .prepare("SELECT * FROM medical_records WHERE patient_id = ? ORDER BY id DESC")
+        .bind(patientId)
+        .all();
 
-      const appointments = await env.DB.prepare(
-        "SELECT * FROM appointments WHERE patient_id = ? ORDER BY id DESC"
-      ).bind(patientId).all();
+      const appointments = await env.DB
+        .prepare("SELECT * FROM appointments WHERE patient_id = ? ORDER BY id DESC")
+        .bind(patientId)
+        .all();
 
-      const referrals = await env.DB.prepare(
-        "SELECT * FROM referrals WHERE patient_id = ? ORDER BY id DESC"
-      ).bind(patientId).all();
+      const referrals = await env.DB
+        .prepare("SELECT * FROM referrals WHERE patient_id = ? ORDER BY id DESC")
+        .bind(patientId)
+        .all();
 
-      const followUps = await env.DB.prepare(
-        "SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY id DESC"
-      ).bind(patientId).all();
+      const followups = await env.DB
+        .prepare("SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY id DESC")
+        .bind(patientId)
+        .all();
 
       return json({
         success: true,
@@ -114,66 +164,66 @@ async function api(request, env, url) {
         records: records.results || [],
         appointments: appointments.results || [],
         referrals: referrals.results || [],
-        follow_ups: followUps.results || []
+        follow_ups: followups.results || []
       });
     }
 
     if (url.pathname === "/api/medical-records" && request.method === "POST") {
-      const data = await readJson(request);
+      const d = await readJson(request);
 
-      if (!data || !data.patient_id || !String(data.notes || "").trim()) {
+      if (!d || !d.patient_id || !String(d.notes || "").trim()) {
         return json({
           success: false,
-          message: "Patient ID and notes are required"
+          message: "Patient ID and notes are required."
         }, 400);
       }
 
       const result = await env.DB.prepare(
         "INSERT INTO medical_records (patient_id, recorded_by, record_type, notes) VALUES (?, ?, ?, ?)"
       ).bind(
-        data.patient_id,
-        data.recorded_by || "Health Worker",
-        data.record_type || "Clinical Note",
-        String(data.notes).trim()
+        d.patient_id,
+        d.recorded_by || "Health Worker",
+        d.record_type || "Clinical Note",
+        String(d.notes).trim()
       ).run();
 
       return json({
         success: true,
-        message: "Medical record added",
+        message: "Medical record added successfully.",
         record_id: result.meta.last_row_id
       }, 201);
     }
 
     if (url.pathname === "/api/appointments" && request.method === "POST") {
-      const data = await readJson(request);
+      const d = await readJson(request);
 
-      if (!data || !data.patient_id || !data.appointment_date || !data.appointment_time) {
+      if (!d || !d.patient_id || !d.appointment_date || !d.appointment_time) {
         return json({
           success: false,
-          message: "Patient ID, date and time are required"
+          message: "Patient ID, date and time are required."
         }, 400);
       }
 
       const result = await env.DB.prepare(
         "INSERT INTO appointments (patient_id, doctor_name, appointment_date, appointment_time, reason) VALUES (?, ?, ?, ?, ?)"
       ).bind(
-        data.patient_id,
-        data.doctor_name || null,
-        data.appointment_date,
-        data.appointment_time,
-        data.reason || null
+        d.patient_id,
+        d.doctor_name || null,
+        d.appointment_date,
+        d.appointment_time,
+        d.reason || null
       ).run();
 
       return json({
         success: true,
-        message: "Appointment booked successfully",
+        message: "Appointment booked successfully.",
         appointment_id: result.meta.last_row_id
       }, 201);
     }
 
     if (url.pathname === "/api/appointments" && request.method === "GET") {
       const result = await env.DB.prepare(
-        "SELECT appointments.*, patients.name AS patient_name FROM appointments LEFT JOIN patients ON patients.id = appointments.patient_id ORDER BY appointment_date ASC, appointment_time ASC, id DESC LIMIT 100"
+        "SELECT appointments.*, patients.name AS patient_name FROM appointments LEFT JOIN patients ON patients.id = appointments.patient_id ORDER BY appointment_date ASC, appointment_time ASC, appointments.id DESC LIMIT 100"
       ).all();
 
       return json({
@@ -183,53 +233,48 @@ async function api(request, env, url) {
     }
 
     if (url.pathname === "/api/appointments/status" && request.method === "POST") {
-      const data = await readJson(request);
+      const d = await readJson(request);
 
-      if (!data || !data.id || !data.status) {
+      if (!d || !d.id || !d.status) {
         return json({
           success: false,
-          message: "Appointment ID and status are required"
+          message: "Appointment ID and status are required."
         }, 400);
       }
 
-      await env.DB.prepare(
-        "UPDATE appointments SET status = ? WHERE id = ?"
-      ).bind(data.status, data.id).run();
+      await env.DB
+        .prepare("UPDATE appointments SET status = ? WHERE id = ?")
+        .bind(d.status, d.id)
+        .run();
 
       return json({
         success: true,
-        message: "Appointment status updated"
+        message: "Appointment status updated."
       });
     }
 
     if (url.pathname === "/api/referrals" && request.method === "POST") {
-      const data = await readJson(request);
+      const d = await readJson(request);
 
-      if (
-        !data ||
-        !data.patient_id ||
-        !data.from_facility ||
-        !data.to_facility ||
-        !data.reason
-      ) {
+      if (!d || !d.patient_id || !d.from_facility || !d.to_facility || !d.reason) {
         return json({
           success: false,
-          message: "Patient ID, from facility, to facility and reason are required"
+          message: "Patient ID, facilities and reason are required."
         }, 400);
       }
 
       const result = await env.DB.prepare(
         "INSERT INTO referrals (patient_id, from_facility, to_facility, reason) VALUES (?, ?, ?, ?)"
       ).bind(
-        data.patient_id,
-        data.from_facility,
-        data.to_facility,
-        data.reason
+        d.patient_id,
+        d.from_facility,
+        d.to_facility,
+        d.reason
       ).run();
 
       return json({
         success: true,
-        message: "Referral created successfully",
+        message: "Referral created successfully.",
         referral_id: result.meta.last_row_id
       }, 201);
     }
@@ -246,54 +291,54 @@ async function api(request, env, url) {
     }
 
     if (url.pathname === "/api/referrals/status" && request.method === "POST") {
-      const data = await readJson(request);
+      const d = await readJson(request);
 
-      if (!data || !data.id || !data.status) {
+      if (!d || !d.id || !d.status) {
         return json({
           success: false,
-          message: "Referral ID and status are required"
+          message: "Referral ID and status are required."
         }, 400);
       }
 
-      if (data.status === "completed") {
+      if (d.status === "completed") {
         await env.DB.prepare(
           "UPDATE referrals SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?"
-        ).bind(data.status, data.id).run();
+        ).bind(d.status, d.id).run();
       } else {
         await env.DB.prepare(
           "UPDATE referrals SET status = ? WHERE id = ?"
-        ).bind(data.status, data.id).run();
+        ).bind(d.status, d.id).run();
       }
 
       return json({
         success: true,
-        message: "Referral status updated"
+        message: "Referral status updated."
       });
     }
 
     if (url.pathname === "/api/follow-ups" && request.method === "POST") {
-      const data = await readJson(request);
+      const d = await readJson(request);
 
-      if (!data || !data.patient_id || !data.follow_up_date || !data.purpose) {
+      if (!d || !d.patient_id || !d.follow_up_date || !d.purpose) {
         return json({
           success: false,
-          message: "Patient ID, date and purpose are required"
+          message: "Patient ID, date and purpose are required."
         }, 400);
       }
 
       const result = await env.DB.prepare(
         "INSERT INTO follow_ups (patient_id, follow_up_date, purpose, status, notes) VALUES (?, ?, ?, ?, ?)"
       ).bind(
-        data.patient_id,
-        data.follow_up_date,
-        data.purpose,
-        data.status || "pending",
-        data.notes || null
+        d.patient_id,
+        d.follow_up_date,
+        d.purpose,
+        "pending",
+        d.notes || null
       ).run();
 
       return json({
         success: true,
-        message: "Follow-up created",
+        message: "Follow-up scheduled successfully.",
         follow_up_id: result.meta.last_row_id
       }, 201);
     }
@@ -309,35 +354,9 @@ async function api(request, env, url) {
       });
     }
 
-    if (url.pathname === "/api/dashboard" && request.method === "GET") {
-      const p = await env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM patients"
-      ).first();
-
-      const a = await env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM appointments WHERE status != 'completed'"
-      ).first();
-
-      const r = await env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM referrals WHERE status != 'completed'"
-      ).first();
-
-      const f = await env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM follow_ups WHERE status != 'completed'"
-      ).first();
-
-      return json({
-        success: true,
-        patients: Number(p?.count || 0),
-        appointments: Number(a?.count || 0),
-        referrals: Number(r?.count || 0),
-        follow_ups: Number(f?.count || 0)
-      });
-    }
-
     return json({
       success: false,
-      message: "API endpoint not found"
+      message: "API endpoint not found."
     }, 404);
 
   } catch (error) {
@@ -345,7 +364,7 @@ async function api(request, env, url) {
 
     return json({
       success: false,
-      message: "Server error. Please check Cloudflare logs."
+      message: error.message || "Server error."
     }, 500);
   }
 }
@@ -354,1142 +373,1783 @@ function page() {
   return `<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Rural Health Connect</title>
 
 <style>
-*{box-sizing:border-box}
+
+*{
+  box-sizing:border-box;
+}
 
 body{
   margin:0;
   font-family:Arial,sans-serif;
   background:#f4f7fb;
-  color:#172033
+  color:#172033;
 }
 
 header{
-  background:#0b5cab;
-  color:#fff;
-  padding:20px
+  background:linear-gradient(135deg,#0757a5,#0879c9);
+  color:white;
+  padding:24px;
 }
 
-header h1{
-  margin:0 0 6px
+.header{
+  max-width:1180px;
+  margin:auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
 }
 
-header p{
-  margin:0;
-  opacity:.9
+.logo{
+  font-size:28px;
+  font-weight:800;
+}
+
+.tagline{
+  margin-top:5px;
+  opacity:.9;
+}
+
+.lang{
+  border:0;
+  background:white;
+  color:#0757a5;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
 }
 
 .wrap{
-  max-width:1100px;
+  max-width:1180px;
   margin:auto;
-  padding:18px
+  padding:22px;
 }
 
-.grid{
+.hero{
+  background:linear-gradient(135deg,#eaf5ff,#ffffff);
+  border:1px solid #d7e7f6;
+  border-radius:18px;
+  padding:25px;
+  margin-bottom:18px;
+}
+
+.hero h1{
+  margin:0 0 8px;
+  font-size:32px;
+}
+
+.notice{
+  background:#fff7d6;
+  border-left:5px solid #e3a400;
+  padding:14px 16px;
+  border-radius:12px;
+  margin-bottom:18px;
+}
+
+.stats{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
-  gap:14px
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:20px;
 }
 
-.card,.panel{
-  background:#fff;
-  border-radius:14px;
-  padding:18px;
-  box-shadow:0 3px 14px rgba(0,0,0,.07);
-  margin-bottom:16px
+.card{
+  background:white;
+  border:1px solid #e4eaf2;
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 4px 18px rgba(20,33,61,.06);
 }
 
 .stat{
-  font-size:30px;
-  font-weight:700
+  font-size:32px;
+  font-weight:800;
+  margin-top:7px;
+}
+
+.muted{
+  color:#68768a;
+  font-size:14px;
 }
 
 .tabs{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
-  margin-bottom:16px
+  gap:9px;
+  margin-bottom:18px;
 }
 
-.tabs button{
+.tab{
   border:0;
-  padding:11px 14px;
+  background:#e6eef8;
+  color:#17365d;
+  padding:12px 16px;
   border-radius:10px;
-  background:#e5eef9;
-  cursor:pointer
+  font-weight:700;
+  cursor:pointer;
 }
 
-.tabs button.active{
-  background:#0b5cab;
-  color:#fff
+.tab:hover{
+  background:#d4e4f5;
+}
+
+.tab.active{
+  background:#075fae;
+  color:white;
+}
+
+.tab.emergency{
+  background:#c62828;
+  color:white;
 }
 
 .section{
-  display:none
+  display:none;
 }
 
 .section.active{
-  display:block
+  display:block;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:16px;
 }
 
 .formgrid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-  gap:12px
+  grid-template-columns:repeat(2,1fr);
+  gap:14px;
 }
 
 label{
-  font-weight:600;
-  font-size:14px;
   display:block;
-  margin-bottom:5px
+  font-size:14px;
+  font-weight:700;
+  margin:12px 0 6px;
 }
 
-input,select,textarea{
+input,
+select,
+textarea{
   width:100%;
-  padding:11px;
-  border:1px solid #ccd5e0;
-  border-radius:9px;
-  font:inherit
+  padding:12px;
+  border:1px solid #cfd8e5;
+  border-radius:10px;
+  font:inherit;
+  background:white;
 }
 
 textarea{
-  min-height:100px
+  min-height:110px;
+  resize:vertical;
 }
 
-button.primary{
-  background:#0b5cab;
-  color:white;
+.primary{
   border:0;
-  border-radius:9px;
-  padding:11px 16px;
+  background:#075fae;
+  color:white;
+  padding:12px 18px;
+  border-radius:10px;
+  font-weight:700;
   cursor:pointer;
-  margin-top:10px
+  margin-top:14px;
 }
 
-.message{
+.primary:hover{
+  background:#064d8d;
+}
+
+.secondary{
+  border:0;
+  background:#e8eef6;
+  padding:9px 12px;
+  border-radius:9px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+.secondary:hover{
+  background:#d8e2ef;
+}
+
+.msg{
+  margin-top:12px;
   padding:11px;
   border-radius:9px;
-  margin-top:12px;
-  background:#edf5ff
+  display:none;
 }
 
-.error{
-  background:#ffecec;
-  color:#a11
+.msg.show{
+  display:block;
 }
 
-.success{
-  background:#eaf8ef;
-  color:#176b35
+.msg.success{
+  background:#e8f7ee;
+  color:#176b35;
 }
 
-.patient-card,.item{
-  border:1px solid #dde4ee;
-  border-radius:11px;
+.msg.error{
+  background:#ffe9e9;
+  color:#a11;
+}
+
+.item{
+  border:1px solid #e0e7f0;
+  border-radius:12px;
   padding:14px;
-  margin:10px 0
-}
-
-.danger{
-  background:#b42318!important
-}
-
-.muted{
-  color:#65748b;
-  font-size:13px
+  margin-top:10px;
+  background:#fbfcfe;
 }
 
 .pill{
   display:inline-block;
-  padding:4px 8px;
-  border-radius:999px;
   background:#e8eef7;
-  font-size:12px
+  padding:4px 9px;
+  border-radius:999px;
+  font-size:12px;
 }
 
-.notice{
-  background:#fff7d6;
-  border-left:5px solid #e5a900;
-  padding:12px;
-  border-radius:8px
+.actions{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  margin-top:18px;
 }
 
-.lang{
-  float:right;
-  background:#fff;
-  color:#0b5cab;
-  border:0;
-  padding:7px 10px;
-  border-radius:8px
-}
-
-.smallbtn{
-  padding:7px 9px;
-  border:0;
-  border-radius:7px;
+.action{
+  background:white;
+  border:1px solid #dce7f2;
+  border-radius:14px;
+  padding:18px;
+  text-align:left;
   cursor:pointer;
-  margin:3px;
-  background:#e9eef5
+  font-weight:700;
 }
 
-.smallbtn.ok{
-  background:#dff4e5
+.action:hover{
+  border-color:#075fae;
+  transform:translateY(-1px);
 }
 
-.smallbtn.warn{
-  background:#fff0d5
+.action span{
+  display:block;
+  color:#65748b;
+  font-size:13px;
+  font-weight:400;
+  margin-top:5px;
 }
+
+footer{
+  text-align:center;
+  color:#718096;
+  padding:25px;
+  font-size:13px;
+}
+
+@media(max-width:800px){
+
+  .stats{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .grid,
+  .formgrid{
+    grid-template-columns:1fr;
+  }
+
+  .actions{
+    grid-template-columns:1fr;
+  }
+
+  .header{
+    align-items:flex-start;
+  }
+
+}
+
+@media(max-width:500px){
+
+  .stats{
+    grid-template-columns:1fr;
+  }
+
+  .wrap{
+    padding:14px;
+  }
+
+  .hero h1{
+    font-size:25px;
+  }
+
+}
+
 </style>
 </head>
 
 <body>
 
 <header>
-<button class="lang" onclick="toggleLang()">मराठी / English</button>
-<h1>Rural Health Connect</h1>
-<p id="subtitle">
-Integrated healthcare access & quality support platform for rural communities
-</p>
+
+<div class="header">
+
+<div>
+
+<div class="logo">
+♥ Rural Health Connect
+</div>
+
+<div class="tagline" id="tagline">
+Integrated healthcare access & quality support for rural communities
+</div>
+
+</div>
+
+<button class="lang" id="langBtn">
+मराठी / English
+</button>
+
+</div>
+
 </header>
 
-<div class="wrap">
+
+<main class="wrap">
+
+<div class="hero">
+
+<h1 id="welcome">
+Healthcare access, closer to home.
+</h1>
+
+<p id="intro">
+One connected platform for patients, frontline health workers and doctors — supporting registration, medical records, appointments, referrals and follow-up care.
+</p>
+
+</div>
+
 
 <div class="notice">
+
 <b>Demo / SIH Prototype:</b>
+
 This platform supports patients, frontline health workers and doctors.
 It does not replace professional medical judgement or emergency services.
+
 </div>
 
-<div class="grid" id="stats">
 
-<div class="card">
-<div class="muted">Patients</div>
-<div class="stat" id="sPatients">-</div>
-</div>
+<div class="stats">
 
 <div class="card">
-<div class="muted">Open appointments</div>
-<div class="stat" id="sAppointments">-</div>
+
+<div class="muted">
+Total Patients
 </div>
+
+<div class="stat" id="sPatients">
+0
+</div>
+
+</div>
+
 
 <div class="card">
-<div class="muted">Open referrals</div>
-<div class="stat" id="sReferrals">-</div>
+
+<div class="muted">
+Open Appointments
 </div>
+
+<div class="stat" id="sAppointments">
+0
+</div>
+
+</div>
+
 
 <div class="card">
-<div class="muted">Follow-ups</div>
-<div class="stat" id="sFollowups">-</div>
+
+<div class="muted">
+Open Referrals
+</div>
+
+<div class="stat" id="sReferrals">
+0
 </div>
 
 </div>
+
+
+<div class="card">
+
+<div class="muted">
+Follow-ups
+</div>
+
+<div class="stat" id="sFollowups">
+0
+</div>
+
+</div>
+
+</div>
+
 
 <div class="tabs">
 
-<button class="active" onclick="showTab('home',this)">
+<button class="tab active" data-tab="home">
 Dashboard
 </button>
 
-<button onclick="showTab('patient',this)">
+<button class="tab" data-tab="patient">
 Patient
 </button>
 
-<button onclick="showTab('record',this)">
+<button class="tab" data-tab="record">
 Medical Report
 </button>
 
-<button onclick="showTab('appointment',this)">
+<button class="tab" data-tab="appointment">
 Appointments
 </button>
 
-<button onclick="showTab('referral',this)">
+<button class="tab" data-tab="referral">
 Referrals
 </button>
 
-<button onclick="showTab('followup',this)">
+<button class="tab" data-tab="followup">
 Follow-up
 </button>
 
-<button class="danger" onclick="emergency()">
+<button class="tab emergency" id="emergencyBtn">
 Emergency
 </button>
 
 </div>
 
+
 <section id="home" class="section active">
 
-<div class="panel">
+<div class="card">
 
-<h2>Healthcare Access Dashboard</h2>
+<h2>
+Connected Healthcare Dashboard
+</h2>
 
 <p>
-One connected workflow for registration, longitudinal records,
-appointments, referrals and follow-up.
+Manage the complete care journey from registration to follow-up.
 </p>
 
-<div id="healthMessage" class="muted">
-Loading dashboard...
+
+<div class="actions">
+
+<button class="action" data-go="patient">
+
+👤 Register / Search Patient
+
+<span>
+Create or find a patient record
+</span>
+
+</button>
+
+
+<button class="action" data-go="record">
+
+📄 Medical Report
+
+<span>
+View the full longitudinal report
+</span>
+
+</button>
+
+
+<button class="action" data-go="appointment">
+
+📅 Appointments
+
+<span>
+Book and manage consultations
+</span>
+
+</button>
+
+
+<button class="action" data-go="referral">
+
+↔ Referrals
+
+<span>
+Track referral progress
+</span>
+
+</button>
+
+
+<button class="action" data-go="followup">
+
+⏰ Follow-up
+
+<span>
+Schedule continuing care
+</span>
+
+</button>
+
+
+<button class="action" id="apiTestBtn">
+
+✓ System Check
+
+<span>
+Test Worker + D1 connection
+</span>
+
+</button>
+
+</div>
+
+
+<div id="homeMsg" class="msg">
 </div>
 
 </div>
 
 </section>
+
 
 <section id="patient" class="section">
 
-<div class="panel">
+<div class="grid">
 
-<h2>Patient Registration</h2>
+
+<div class="card">
+
+<h2>
+Register Patient
+</h2>
 
 <div class="formgrid">
 
 <div>
-<label>Patient name *</label>
+
+<label>
+Patient name *
+</label>
+
 <input id="pName">
+
 </div>
 
+
 <div>
-<label>Age</label>
+
+<label>
+Age
+</label>
+
 <input id="pAge" type="number" min="0" max="120">
+
 </div>
 
+
 <div>
-<label>Gender</label>
+
+<label>
+Gender
+</label>
+
 <select id="pGender">
-<option value="">Select</option>
-<option>Female</option>
-<option>Male</option>
-<option>Other</option>
+
+<option value="">
+Select
+</option>
+
+<option>
+Female
+</option>
+
+<option>
+Male
+</option>
+
+<option>
+Other
+</option>
+
 </select>
+
 </div>
 
+
 <div>
-<label>Village</label>
+
+<label>
+Village
+</label>
+
 <input id="pVillage">
+
 </div>
+
 
 <div>
-<label>Phone</label>
-<input id="pPhone" inputmode="tel">
-</div>
+
+<label>
+Phone
+</label>
+
+<input id="pPhone">
 
 </div>
 
-<button class="primary" onclick="registerPatient()">
+</div>
+
+
+<button class="primary" id="registerBtn">
 Register Patient
 </button>
 
-<div id="patientMsg"></div>
+<div id="patientMsg" class="msg">
+</div>
 
 </div>
 
-<div class="panel">
 
-<h2>Search Patient</h2>
+<div class="card">
+
+<h2>
+Search Patient
+</h2>
 
 <div class="formgrid">
 
 <div>
-<label>Patient ID</label>
+
+<label>
+Patient ID
+</label>
+
 <input id="searchId">
+
 </div>
+
 
 <div>
-<label>Patient name</label>
+
+<label>
+Patient name
+</label>
+
 <input id="searchName">
-</div>
 
 </div>
 
-<button class="primary" onclick="searchPatients()">
-Search
+</div>
+
+
+<button class="primary" id="searchBtn">
+Search Patient
 </button>
 
-<div id="patientResults"></div>
+<div id="patientResults">
+</div>
+
+</div>
 
 </div>
 
 </section>
+
 
 <section id="record" class="section">
 
-<div class="panel">
+<div class="grid">
 
-<h2>Full Medical Report</h2>
 
-<label>Patient ID *</label>
+<div class="card">
+
+<h2>
+Full Medical Report
+</h2>
+
+<label>
+Patient ID *
+</label>
 
 <input id="recordPatientId">
 
-<button class="primary" onclick="loadRecord()">
+<button class="primary" id="viewRecordBtn">
 View Full Report
 </button>
 
-<div id="fullRecord"></div>
+<div id="fullRecord">
+</div>
 
 </div>
 
-<div class="panel">
 
-<h2>Add Medical Record</h2>
+<div class="card">
 
-<div class="formgrid">
+<h2>
+Add Medical Record
+</h2>
 
-<div>
-<label>Patient ID *</label>
+<label>
+Patient ID *
+</label>
+
 <input id="mPatientId">
-</div>
 
-<div>
-<label>Recorded by</label>
+
+<label>
+Recorded by
+</label>
+
 <input id="mRecordedBy" value="Health Worker">
-</div>
 
-<div>
-<label>Record type</label>
+
+<label>
+Record type
+</label>
+
 <input id="mType" value="Clinical Note">
-</div>
 
-</div>
 
-<label>Notes *</label>
+<label>
+Notes *
+</label>
 
 <textarea id="mNotes"></textarea>
 
-<button class="primary" onclick="addMedicalRecord()">
-Add Record
+
+<button class="primary" id="addRecordBtn">
+Add Medical Record
 </button>
 
-<div id="recordMsg"></div>
+<div id="recordMsg" class="msg">
+</div>
+
+</div>
 
 </div>
 
 </section>
+
 
 <section id="appointment" class="section">
 
-<div class="panel">
+<div class="grid">
 
-<h2>Appointment & Queue</h2>
 
-<div class="formgrid">
+<div class="card">
 
-<div>
-<label>Patient ID *</label>
+<h2>
+Book Appointment
+</h2>
+
+<label>
+Patient ID *
+</label>
+
 <input id="aPatientId">
-</div>
 
-<div>
-<label>Doctor</label>
-<input id="aDoctor">
-</div>
 
-<div>
-<label>Date *</label>
+<label>
+Doctor
+</label>
+
+<input id="aDoctor" placeholder="Doctor name">
+
+
+<label>
+Date *
+</label>
+
 <input id="aDate" type="date">
-</div>
 
-<div>
-<label>Time *</label>
+
+<label>
+Time *
+</label>
+
 <input id="aTime" type="time">
-</div>
 
-</div>
 
-<label>Reason</label>
+<label>
+Reason
+</label>
 
 <textarea id="aReason"></textarea>
 
-<button class="primary" onclick="bookAppointment()">
+
+<button class="primary" id="bookBtn">
 Book Appointment
 </button>
 
-<div id="appointmentMsg"></div>
+<div id="appointmentMsg" class="msg">
+</div>
 
 </div>
 
-<div class="panel">
 
-<h2>Current Queue / Appointments</h2>
+<div class="card">
 
-<button class="primary" onclick="loadAppointments()">
+<h2>
+Appointments / Queue
+</h2>
+
+<button class="secondary" id="refreshAppointments">
 Refresh
 </button>
 
-<div id="appointmentList"></div>
+<div id="appointmentList">
+</div>
+
+</div>
 
 </div>
 
 </section>
+
 
 <section id="referral" class="section">
 
-<div class="panel">
+<div class="grid">
 
-<h2>Referral Tracking</h2>
 
-<div class="formgrid">
+<div class="card">
 
-<div>
-<label>Patient ID *</label>
+<h2>
+Create Referral
+</h2>
+
+<label>
+Patient ID *
+</label>
+
 <input id="rPatientId">
-</div>
 
-<div>
-<label>From facility *</label>
+
+<label>
+From facility *
+</label>
+
 <input id="rFrom" placeholder="Sub-centre / PHC">
-</div>
 
-<div>
-<label>To facility *</label>
+
+<label>
+To facility *
+</label>
+
 <input id="rTo" placeholder="Rural / District Hospital">
-</div>
 
-</div>
 
-<label>Reason *</label>
+<label>
+Reason *
+</label>
 
 <textarea id="rReason"></textarea>
 
-<button class="primary" onclick="createReferral()">
+
+<button class="primary" id="createReferralBtn">
 Create Referral
 </button>
 
-<div id="referralMsg"></div>
+<div id="referralMsg" class="msg">
+</div>
 
 </div>
 
-<div class="panel">
 
-<h2>Referral Status</h2>
+<div class="card">
 
-<button class="primary" onclick="loadReferrals()">
+<h2>
+Referral Tracking
+</h2>
+
+<button class="secondary" id="refreshReferrals">
 Refresh
 </button>
 
-<div id="referralList"></div>
+<div id="referralList">
+</div>
+
+</div>
 
 </div>
 
 </section>
+
 
 <section id="followup" class="section">
 
-<div class="panel">
+<div class="grid">
 
-<h2>High-risk / Chronic Follow-up</h2>
 
-<div class="formgrid">
+<div class="card">
 
-<div>
-<label>Patient ID *</label>
+<h2>
+Schedule Follow-up
+</h2>
+
+<label>
+Patient ID *
+</label>
+
 <input id="fPatientId">
-</div>
 
-<div>
-<label>Follow-up date *</label>
+
+<label>
+Follow-up date *
+</label>
+
 <input id="fDate" type="date">
-</div>
 
-<div>
-<label>Purpose *</label>
+
+<label>
+Purpose *
+</label>
+
 <input id="fPurpose" placeholder="BP / diabetes / maternal / child">
-</div>
 
-</div>
 
-<label>Notes</label>
+<label>
+Notes
+</label>
 
 <textarea id="fNotes"></textarea>
 
-<button class="primary" onclick="createFollowup()">
+
+<button class="primary" id="createFollowupBtn">
 Schedule Follow-up
 </button>
 
-<div id="followupMsg"></div>
+<div id="followupMsg" class="msg">
+</div>
 
 </div>
 
-<div class="panel">
 
-<h2>Follow-up List</h2>
+<div class="card">
 
-<button class="primary" onclick="loadFollowups()">
+<h2>
+Follow-up List
+</h2>
+
+<button class="secondary" id="refreshFollowups">
 Refresh
 </button>
 
-<div id="followupList"></div>
+<div id="followupList">
+</div>
+
+</div>
 
 </div>
 
 </section>
 
-</div>
+
+<footer>
+Rural Health Connect • SIH Prototype • Supporting rural healthcare access and continuity
+</footer>
+
+</main>
+
 
 <script>
 
+(function(){
+
+"use strict";
+
 var API = window.location.origin;
 
-function msg(id,text,type){
-  var el=document.getElementById(id);
-  el.className='message '+(type||'');
-  el.textContent=text;
+
+function get(id){
+  return document.getElementById(id);
 }
 
-function showTab(id,btn){
 
-  document.querySelectorAll('.section').forEach(function(x){
-    x.classList.remove('active');
-  });
+function escapeHtml(value){
 
-  document.getElementById(id).classList.add('active');
+  return String(value == null ? "" : value)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 
-  document.querySelectorAll('.tabs button').forEach(function(x){
-    x.classList.remove('active');
-  });
-
-  if(btn)btn.classList.add('active');
-
-  if(id==='appointment')loadAppointments();
-  if(id==='referral')loadReferrals();
-  if(id==='followup')loadFollowups();
 }
 
-async function getJson(url){
 
-  var r=await fetch(url);
-  var d=await r.json();
+function showMessage(id,text,type){
 
-  if(!r.ok||!d.success)
-    throw new Error(d.message||'Request failed');
+  var element = get(id);
 
-  return d;
+  element.textContent = text;
+
+  element.className = "msg show " + (type || "");
+
 }
+
+
+async function getJson(path){
+
+  var response = await fetch(API + path);
+
+  var data = await response.json();
+
+  if(!response.ok || !data.success){
+    throw new Error(data.message || "Request failed");
+  }
+
+  return data;
+
+}
+
 
 async function postJson(path,data){
 
-  var r=await fetch(API+path,{
-    method:'POST',
+  var response = await fetch(API + path,{
+    method:"POST",
     headers:{
-      'Content-Type':'application/json'
+      "Content-Type":"application/json"
     },
     body:JSON.stringify(data)
   });
 
-  var d=await r.json();
+  var result = await response.json();
 
-  if(!r.ok||!d.success)
-    throw new Error(d.message||'Request failed');
+  if(!response.ok || !result.success){
+    throw new Error(result.message || "Request failed");
+  }
 
-  return d;
+  return result;
+
 }
+
+
+function showTab(name){
+
+  document.querySelectorAll(".section").forEach(function(section){
+    section.classList.remove("active");
+  });
+
+  var selected = get(name);
+
+  if(selected){
+    selected.classList.add("active");
+  }
+
+  document.querySelectorAll(".tab").forEach(function(button){
+
+    button.classList.toggle(
+      "active",
+      button.getAttribute("data-tab") === name
+    );
+
+  });
+
+
+  if(name === "appointment"){
+    loadAppointments();
+  }
+
+  if(name === "referral"){
+    loadReferrals();
+  }
+
+  if(name === "followup"){
+    loadFollowups();
+  }
+
+}
+
+
+function fillPatientId(id){
+
+  [
+    "recordPatientId",
+    "mPatientId",
+    "aPatientId",
+    "rPatientId",
+    "fPatientId"
+  ].forEach(function(field){
+
+    if(get(field)){
+      get(field).value = id;
+    }
+
+  });
+
+}
+
 
 async function loadDashboard(){
 
   try{
 
-    var d=await getJson(API+'/api/dashboard');
+    var data = await getJson("/api/dashboard");
 
-    document.getElementById('sPatients').textContent=d.patients;
-    document.getElementById('sAppointments').textContent=d.appointments;
-    document.getElementById('sReferrals').textContent=d.referrals;
-    document.getElementById('sFollowups').textContent=d.follow_ups;
+    get("sPatients").textContent = data.patients;
+    get("sAppointments").textContent = data.appointments;
+    get("sReferrals").textContent = data.referrals;
+    get("sFollowups").textContent = data.follow_ups;
 
-    document.getElementById('healthMessage').textContent=
-      'Connected to Cloudflare Worker + D1 database.';
+  }catch(error){
 
-  }catch(e){
+    get("sPatients").textContent = "!";
+    get("sAppointments").textContent = "!";
+    get("sReferrals").textContent = "!";
+    get("sFollowups").textContent = "!";
 
-    document.getElementById('healthMessage').textContent=e.message;
+    showMessage(
+      "homeMsg",
+      error.message,
+      "error"
+    );
 
   }
+
 }
+
 
 async function registerPatient(){
 
   try{
 
-    var d=await postJson('/api/patients',{
-
-      name:document.getElementById('pName').value,
-
-      age:document.getElementById('pAge').value,
-
-      gender:document.getElementById('pGender').value,
-
-      village:document.getElementById('pVillage').value,
-
-      phone:document.getElementById('pPhone').value
-
-    });
-
-    msg(
-      'patientMsg',
-      d.message+' Patient ID: '+d.patient_id,
-      'success'
+    var data = await postJson(
+      "/api/patients",
+      {
+        name:get("pName").value,
+        age:get("pAge").value,
+        gender:get("pGender").value,
+        village:get("pVillage").value,
+        phone:get("pPhone").value
+      }
     );
 
-    document.getElementById('recordPatientId').value=d.patient_id;
-    document.getElementById('mPatientId').value=d.patient_id;
-    document.getElementById('aPatientId').value=d.patient_id;
-    document.getElementById('rPatientId').value=d.patient_id;
-    document.getElementById('fPatientId').value=d.patient_id;
+    fillPatientId(data.patient_id);
+
+    showMessage(
+      "patientMsg",
+      data.message + " Patient ID: " + data.patient_id,
+      "success"
+    );
 
     loadDashboard();
 
-  }catch(e){
+  }catch(error){
 
-    msg('patientMsg',e.message,'error');
+    showMessage(
+      "patientMsg",
+      error.message,
+      "error"
+    );
 
   }
+
 }
+
 
 async function searchPatients(){
 
-  var id=document.getElementById('searchId').value.trim();
+  var id = get("searchId").value.trim();
+  var name = get("searchName").value.trim();
 
-  var name=document.getElementById('searchName').value.trim();
+  if(!id && !name){
 
-  if(!id&&!name){
-
-    msg(
-      'patientResults',
-      'Enter Patient ID or name.',
-      'error'
+    showMessage(
+      "patientResults",
+      "Enter Patient ID or name.",
+      "error"
     );
 
     return;
+
   }
+
 
   try{
 
-    var q=id
-      ?'id='+encodeURIComponent(id)
-      :'name='+encodeURIComponent(name);
+    var query = id
+      ? "id=" + encodeURIComponent(id)
+      : "name=" + encodeURIComponent(name);
 
-    var d=await getJson(API+'/api/patients?'+q);
+    var data = await getJson(
+      "/api/patients?" + query
+    );
 
-    if(!d.patients.length){
 
-      msg(
-        'patientResults',
-        'No patient found.',
-        'error'
+    if(!data.patients.length){
+
+      showMessage(
+        "patientResults",
+        "No patient found.",
+        "error"
       );
 
       return;
+
     }
 
-    document.getElementById('patientResults').innerHTML=
 
-      d.patients.map(function(p){
+    get("patientResults").innerHTML =
+      data.patients.map(function(patient){
 
-        return '<div class="patient-card">'+
+        return `
+          <div class="item">
 
-          '<h3>'+escapeHtml(p.name)+'</h3>'+
+            <h3>
+              ${escapeHtml(patient.name)}
+            </h3>
 
-          '<p><b>Patient ID:</b> '+
-          escapeHtml(p.id)+'</p>'+
+            <div>
+              <b>ID:</b>
+              ${escapeHtml(patient.id)}
+            </div>
 
-          '<p><b>Age:</b> '+
-          escapeHtml(p.age||'N/A')+'</p>'+
+            <div>
+              <b>Age:</b>
+              ${escapeHtml(patient.age || "N/A")}
+            </div>
 
-          '<p><b>Gender:</b> '+
-          escapeHtml(p.gender||'N/A')+'</p>'+
+            <div>
+              <b>Gender:</b>
+              ${escapeHtml(patient.gender || "N/A")}
+            </div>
 
-          '<p><b>Village:</b> '+
-          escapeHtml(p.village||'N/A')+'</p>'+
+            <div>
+              <b>Village:</b>
+              ${escapeHtml(patient.village || "N/A")}
+            </div>
 
-          '<p><b>Phone:</b> '+
-          escapeHtml(p.phone||'N/A')+'</p>'+
+            <div>
+              <b>Phone:</b>
+              ${escapeHtml(patient.phone || "N/A")}
+            </div>
 
-          '<button class="primary" onclick="selectPatient('+
-          Number(p.id)+')">View Full Medical Report</button>'+
+            <button
+              class="primary view-patient"
+              data-id="${escapeHtml(patient.id)}"
+            >
+              View Full Report
+            </button>
 
-          '</div>';
+          </div>
+        `;
 
-      }).join('');
+      }).join("");
 
-  }catch(e){
 
-    msg(
-      'patientResults',
-      e.message,
-      'error'
+    document
+      .querySelectorAll(".view-patient")
+      .forEach(function(button){
+
+        button.addEventListener(
+          "click",
+          function(){
+
+            var patientId =
+              this.getAttribute("data-id");
+
+            fillPatientId(patientId);
+
+            showTab("record");
+
+            loadRecord();
+
+          }
+        );
+
+      });
+
+
+  }catch(error){
+
+    showMessage(
+      "patientResults",
+      error.message,
+      "error"
     );
 
   }
-}
-
-function selectPatient(id){
-
-  document.getElementById('recordPatientId').value=id;
-
-  document.getElementById('mPatientId').value=id;
-
-  showTab(
-    'record',
-    document.querySelectorAll('.tabs button')[2]
-  );
-
-  loadRecord();
-}
-
-function escapeHtml(v){
-
-  return String(v==null?'':v)
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'",'&#039;');
 
 }
+
 
 async function loadRecord(){
 
-  var id=document.getElementById(
-    'recordPatientId'
-  ).value.trim();
+  var patientId =
+    get("recordPatientId").value.trim();
 
-  if(!id){
+  if(!patientId){
 
-    msg(
-      'fullRecord',
-      'Enter Patient ID.',
-      'error'
+    showMessage(
+      "fullRecord",
+      "Enter Patient ID.",
+      "error"
     );
 
     return;
+
   }
+
 
   try{
 
-    var d=await getJson(
-      API+'/api/patient-record?patient_id='+
-      encodeURIComponent(id)
-    );
+    var data =
+      await getJson(
+        "/api/patient-record?patient_id=" +
+        encodeURIComponent(patientId)
+      );
 
-    var p=d.patient;
 
-    var html=
+    var patient = data.patient;
 
-      '<div class="patient-card">'+
 
-      '<h2>'+escapeHtml(p.name)+'</h2>'+
+    var html = `
+      <div class="item">
 
-      '<p><b>ID:</b> '+
-      escapeHtml(p.id)+
-      ' | <b>Age:</b> '+
-      escapeHtml(p.age||'N/A')+
-      ' | <b>Gender:</b> '+
-      escapeHtml(p.gender||'N/A')+
-      '</p>'+
+        <h2>
+          ${escapeHtml(patient.name)}
+        </h2>
 
-      '<p><b>Village:</b> '+
-      escapeHtml(p.village||'N/A')+
-      ' | <b>Phone:</b> '+
-      escapeHtml(p.phone||'N/A')+
-      '</p>'+
+        <p>
+          <b>Patient ID:</b>
+          ${escapeHtml(patient.id)}
+          |
+          <b>Age:</b>
+          ${escapeHtml(patient.age || "N/A")}
+          |
+          <b>Gender:</b>
+          ${escapeHtml(patient.gender || "N/A")}
+        </p>
 
-      '<h3>Medical Records</h3>'+
+        <p>
+          <b>Village:</b>
+          ${escapeHtml(patient.village || "N/A")}
+          |
+          <b>Phone:</b>
+          ${escapeHtml(patient.phone || "N/A")}
+        </p>
 
-      (d.records.length
+        <h3>
+          Medical Records
+        </h3>
+    `;
 
-        ?d.records.map(function(x){
 
-          return '<div class="item">'+
+    if(data.records.length){
 
-            '<b>'+
-            escapeHtml(x.record_type||'Record')+
-            '</b>'+
+      data.records.forEach(function(record){
 
-            '<div>'+
-            escapeHtml(x.notes)+
-            '</div>'+
+        html += `
+          <div class="item">
 
-            '<div class="muted">'+
-            escapeHtml(x.recorded_by||'')+
-            ' · '+
-            escapeHtml(x.created_at||'')+
-            '</div>'+
+            <b>
+              ${escapeHtml(
+                record.record_type || "Record"
+              )}
+            </b>
 
-            '</div>';
+            <div>
+              ${escapeHtml(record.notes)}
+            </div>
 
-        }).join('')
+            <div class="muted">
+              ${escapeHtml(
+                record.recorded_by || ""
+              )}
+              |
+              ${escapeHtml(
+                record.created_at || ""
+              )}
+            </div>
 
-        :'<p class="muted">No medical records.</p>'
+          </div>
+        `;
 
-      )+
+      });
 
-      '<h3>Appointments</h3>'+
+    }else{
 
-      (d.appointments.length
+      html += `
+        <div class="muted">
+          No medical records yet.
+        </div>
+      `;
 
-        ?d.appointments.map(function(x){
+    }
 
-          return '<div class="item">'+
 
-            escapeHtml(x.appointment_date)+
-            ' '+
-            escapeHtml(x.appointment_time)+
-            ' · '+
-            escapeHtml(
-              x.doctor_name||'Doctor not assigned'
-            )+
-            ' · <span class="pill">'+
-            escapeHtml(x.status)+
-            '</span>'+
+    html += `
+      <h3>
+        Appointments
+      </h3>
+    `;
 
-            '</div>';
 
-        }).join('')
+    if(data.appointments.length){
 
-        :'<p class="muted">No appointments.</p>'
+      data.appointments.forEach(function(item){
 
-      )+
+        html += `
+          <div class="item">
 
-      '<h3>Referrals</h3>'+
+            ${escapeHtml(item.appointment_date)}
+            ${escapeHtml(item.appointment_time)}
 
-      (d.referrals.length
+            |
+            ${escapeHtml(
+              item.doctor_name || "Doctor not assigned"
+            )}
 
-        ?d.referrals.map(function(x){
+            |
+            <span class="pill">
+              ${escapeHtml(item.status)}
+            </span>
 
-          return '<div class="item">'+
+          </div>
+        `;
 
-            escapeHtml(x.from_facility)+
-            ' → '+
-            escapeHtml(x.to_facility)+
-            ' · <span class="pill">'+
-            escapeHtml(x.status)+
-            '</span>'+
+      });
 
-            '<div>'+
-            escapeHtml(x.reason)+
-            '</div>'+
+    }else{
 
-            '</div>';
+      html += `
+        <div class="muted">
+          No appointments.
+        </div>
+      `;
 
-        }).join('')
+    }
 
-        :'<p class="muted">No referrals.</p>'
 
-      )+
+    html += `
+      <h3>
+        Referrals
+      </h3>
+    `;
 
-      '<h3>Follow-ups</h3>'+
 
-      (d.follow_ups.length
+    if(data.referrals.length){
 
-        ?d.follow_ups.map(function(x){
+      data.referrals.forEach(function(item){
 
-          return '<div class="item">'+
+        html += `
+          <div class="item">
 
-            escapeHtml(x.follow_up_date)+
-            ' · '+
-            escapeHtml(x.purpose)+
-            ' · <span class="pill">'+
-            escapeHtml(x.status)+
-            '</span>'+
+            ${escapeHtml(item.from_facility)}
 
-            '</div>';
+            →
 
-        }).join('')
+            ${escapeHtml(item.to_facility)}
 
-        :'<p class="muted">No follow-ups.</p>'
+            |
 
-      )+
+            <span class="pill">
+              ${escapeHtml(item.status)}
+            </span>
 
-      '</div>';
+            <div>
+              ${escapeHtml(item.reason)}
+            </div>
 
-    document.getElementById(
-      'fullRecord'
-    ).innerHTML=html;
+          </div>
+        `;
 
-  }catch(e){
+      });
 
-    msg(
-      'fullRecord',
-      e.message,
-      'error'
+    }else{
+
+      html += `
+        <div class="muted">
+          No referrals.
+        </div>
+      `;
+
+    }
+
+
+    html += `
+      <h3>
+        Follow-ups
+      </h3>
+    `;
+
+
+    if(data.follow_ups.length){
+
+      data.follow_ups.forEach(function(item){
+
+        html += `
+          <div class="item">
+
+            ${escapeHtml(item.follow_up_date)}
+
+            |
+
+            ${escapeHtml(item.purpose)}
+
+            |
+
+            <span class="pill">
+              ${escapeHtml(item.status)}
+            </span>
+
+            <div>
+              ${escapeHtml(item.notes || "")}
+            </div>
+
+          </div>
+        `;
+
+      });
+
+    }else{
+
+      html += `
+        <div class="muted">
+          No follow-ups.
+        </div>
+      `;
+
+    }
+
+
+    html += `
+      </div>
+    `;
+
+
+    get("fullRecord").innerHTML = html;
+
+
+  }catch(error){
+
+    showMessage(
+      "fullRecord",
+      error.message,
+      "error"
     );
 
   }
+
 }
+
 
 async function addMedicalRecord(){
 
   try{
 
-    var d=await postJson(
-      '/api/medical-records',
+    var data = await postJson(
+      "/api/medical-records",
       {
-        patient_id:
-          document.getElementById('mPatientId').value,
-
-        recorded_by:
-          document.getElementById('mRecordedBy').value,
-
-        record_type:
-          document.getElementById('mType').value,
-
-        notes:
-          document.getElementById('mNotes').value
+        patient_id:get("mPatientId").value,
+        recorded_by:get("mRecordedBy").value,
+        record_type:get("mType").value,
+        notes:get("mNotes").value
       }
     );
 
-    msg(
-      'recordMsg',
-      d.message,
-      'success'
+
+    showMessage(
+      "recordMsg",
+      data.message,
+      "success"
     );
 
-    document.getElementById('mNotes').value='';
+    get("mNotes").value = "";
 
     loadRecord();
 
-  }catch(e){
+  }catch(error){
 
-    msg(
-      'recordMsg',
-      e.message,
-      'error'
+    showMessage(
+      "recordMsg",
+      error.message,
+      "error"
     );
 
   }
+
 }
+
 
 async function bookAppointment(){
 
   try{
 
-    var d=await postJson(
-      '/api/appointments',
+    var data = await postJson(
+      "/api/appointments",
       {
-        patient_id:
-          document.getElementById('aPatientId').value,
-
-        doctor_name:
-          document.getElementById('aDoctor').value,
-
-        appointment_date:
-          document.getElementById('aDate').value,
-
-        appointment_time:
-          document.getElementById('aTime').value,
-
-        reason:
-          document.getElementById('aReason').value
+        patient_id:get("aPatientId").value,
+        doctor_name:get("aDoctor").value,
+        appointment_date:get("aDate").value,
+        appointment_time:get("aTime").value,
+        reason:get("aReason").value
       }
     );
 
-    msg(
-      'appointmentMsg',
-      d.message,
-      'success'
+
+    showMessage(
+      "appointmentMsg",
+      data.message,
+      "success"
     );
 
     loadAppointments();
     loadDashboard();
 
-  }catch(e){
+  }catch(error){
 
-    msg(
-      'appointmentMsg',
-      e.message,
-      'error'
+    showMessage(
+      "appointmentMsg",
+      error.message,
+      "error"
     );
 
   }
+
 }
+
 
 async function loadAppointments(){
 
   try{
 
-    var d=await getJson(
-      API+'/api/appointments'
-    );
+    var data =
+      await getJson("/api/appointments");
 
-    document.getElementById(
-      'appointmentList'
-    ).innerHTML=
 
-      d.appointments.length
+    if(!data.appointments.length){
 
-      ?
+      get("appointmentList").innerHTML =
+        '<div class="muted">No appointments.</div>';
 
-      d.appointments.map(function(x){
+      return;
 
-        return '<div class="item">'+
+    }
 
-          '<b>#'+
-          escapeHtml(x.id)+
-          ' '+
-          escapeHtml(
-            x.patient_name||
-            ('Patient '+x.patient_id)
-          )+
-          '</b>'+
 
-          '<br>'+
+    get("appointmentList").innerHTML =
+      data.appointments.map(function(item){
 
-          escapeHtml(x.appointment_date)+
-          ' '+
-          escapeHtml(x.appointment_time)+
-          ' · '+
-          escapeHtml(
-            x.doctor_name||'Unassigned'
-          )+
-          ' · <span class="pill">'+
-          escapeHtml(x.status)+
-          '</span>'+
+        return `
+          <div class="item">
 
-          '<br>'+
+            <b>
+              #${escapeHtml(item.id)}
+              ${escapeHtml(
+                item.patient_name ||
+                ("Patient " + item.patient_id)
+              )}
+            </b>
 
-          '<span class="muted">'+
-          escapeHtml(x.reason||'')+
-          '</span>'+
+            <div>
+              ${escapeHtml(item.appointment_date)}
+              ${escapeHtml(item.appointment_time)}
+            </div>
 
-          '<br>'+
+            <div>
+              Doctor:
+              ${escapeHtml(
+                item.doctor_name || "Unassigned"
+              )}
+            </div>
 
-          '<button class="smallbtn ok" '+
-          'onclick="appointmentStatus('+
-          x.id+
-          ',\'completed\')">Complete</button>'+
+            <div>
+              <span class="pill">
+                ${escapeHtml(item.status)}
+              </span>
+            </div>
 
-          '<button class="smallbtn warn" '+
-          'onclick="appointmentStatus('+
-          x.id+
-          ',\'cancelled\')">Cancel</button>'+
+            <button
+              class="secondary complete-appointment"
+              data-id="${escapeHtml(item.id)}"
+            >
+              Complete
+            </button>
 
-          '</div>';
+            <button
+              class="secondary cancel-appointment"
+              data-id="${escapeHtml(item.id)}"
+            >
+              Cancel
+            </button>
 
-      }).join('')
+          </div>
+        `;
 
-      :
+      }).join("");
 
-      '<p class="muted">No appointments.</p>';
 
-  }catch(e){
+    document
+      .querySelectorAll(".complete-appointment")
+      .forEach(function(button){
 
-    document.getElementById(
-      'appointmentList'
-    ).textContent=e.message;
+        button.addEventListener(
+          "click",
+          function(){
+
+            updateAppointment(
+              this.getAttribute("data-id"),
+              "completed"
+            );
+
+          }
+        );
+
+      });
+
+
+    document
+      .querySelectorAll(".cancel-appointment")
+      .forEach(function(button){
+
+        button.addEventListener(
+          "click",
+          function(){
+
+            updateAppointment(
+              this.getAttribute("data-id"),
+              "cancelled"
+            );
+
+          }
+        );
+
+      });
+
+
+  }catch(error){
+
+    get("appointmentList").textContent =
+      error.message;
 
   }
+
 }
 
-async function appointmentStatus(id,status){
+
+async function updateAppointment(id,status){
 
   try{
 
     await postJson(
-      '/api/appointments/status',
+      "/api/appointments/status",
       {
         id:id,
         status:status
@@ -1499,274 +2159,486 @@ async function appointmentStatus(id,status){
     loadAppointments();
     loadDashboard();
 
-  }catch(e){
+  }catch(error){
 
-    alert(e.message);
+    alert(error.message);
 
   }
+
 }
+
 
 async function createReferral(){
 
   try{
 
-    var d=await postJson(
-      '/api/referrals',
+    var data = await postJson(
+      "/api/referrals",
       {
-        patient_id:
-          document.getElementById('rPatientId').value,
-
-        from_facility:
-          document.getElementById('rFrom').value,
-
-        to_facility:
-          document.getElementById('rTo').value,
-
-        reason:
-          document.getElementById('rReason').value
+        patient_id:get("rPatientId").value,
+        from_facility:get("rFrom").value,
+        to_facility:get("rTo").value,
+        reason:get("rReason").value
       }
     );
 
-    msg(
-      'referralMsg',
-      d.message,
-      'success'
+
+    showMessage(
+      "referralMsg",
+      data.message,
+      "success"
     );
 
     loadReferrals();
     loadDashboard();
 
-  }catch(e){
+  }catch(error){
 
-    msg(
-      'referralMsg',
-      e.message,
-      'error'
+    showMessage(
+      "referralMsg",
+      error.message,
+      "error"
     );
 
   }
+
 }
+
 
 async function loadReferrals(){
 
   try{
 
-    var d=await getJson(
-      API+'/api/referrals'
-    );
+    var data =
+      await getJson("/api/referrals");
 
-    document.getElementById(
-      'referralList'
-    ).innerHTML=
 
-      d.referrals.length
+    if(!data.referrals.length){
 
-      ?
+      get("referralList").innerHTML =
+        '<div class="muted">No referrals.</div>';
 
-      d.referrals.map(function(x){
+      return;
 
-        return '<div class="item">'+
+    }
 
-          '<b>#'+
-          escapeHtml(x.id)+
-          ' '+
-          escapeHtml(
-            x.patient_name||
-            ('Patient '+x.patient_id)
-          )+
-          '</b>'+
 
-          '<br>'+
+    get("referralList").innerHTML =
+      data.referrals.map(function(item){
 
-          escapeHtml(x.from_facility)+
-          ' → '+
-          escapeHtml(x.to_facility)+
+        return `
+          <div class="item">
 
-          '<br>'+
+            <b>
+              #${escapeHtml(item.id)}
+              ${escapeHtml(
+                item.patient_name ||
+                ("Patient " + item.patient_id)
+              )}
+            </b>
 
-          escapeHtml(x.reason)+
+            <div>
+              ${escapeHtml(item.from_facility)}
+              →
+              ${escapeHtml(item.to_facility)}
+            </div>
 
-          '<br>'+
+            <div>
+              ${escapeHtml(item.reason)}
+            </div>
 
-          '<span class="pill">'+
-          escapeHtml(x.status)+
-          '</span>'+
+            <span class="pill">
+              ${escapeHtml(item.status)}
+            </span>
 
-          '<br>'+
+            ${
+              item.status !== "completed"
+              ? `
+                <button
+                  class="secondary complete-referral"
+                  data-id="${escapeHtml(item.id)}"
+                >
+                  Mark Completed
+                </button>
+              `
+              : ""
+            }
 
-          '<button class="smallbtn ok" '+
-          'onclick="referralStatus('+
-          x.id+
-          ',\'completed\')">Mark Completed</button>'+
+          </div>
+        `;
 
-          '</div>';
+      }).join("");
 
-      }).join('')
 
-      :
+    document
+      .querySelectorAll(".complete-referral")
+      .forEach(function(button){
 
-      '<p class="muted">No referrals.</p>';
+        button.addEventListener(
+          "click",
+          function(){
 
-  }catch(e){
+            updateReferral(
+              this.getAttribute("data-id")
+            );
 
-    document.getElementById(
-      'referralList'
-    ).textContent=e.message;
+          }
+        );
+
+      });
+
+
+  }catch(error){
+
+    get("referralList").textContent =
+      error.message;
 
   }
+
 }
 
-async function referralStatus(id,status){
+
+async function updateReferral(id){
 
   try{
 
     await postJson(
-      '/api/referrals/status',
+      "/api/referrals/status",
       {
         id:id,
-        status:status
+        status:"completed"
       }
     );
 
     loadReferrals();
     loadDashboard();
 
-  }catch(e){
+  }catch(error){
 
-    alert(e.message);
+    alert(error.message);
 
   }
+
 }
+
 
 async function createFollowup(){
 
   try{
 
-    var d=await postJson(
-      '/api/follow-ups',
+    var data = await postJson(
+      "/api/follow-ups",
       {
-        patient_id:
-          document.getElementById('fPatientId').value,
-
-        follow_up_date:
-          document.getElementById('fDate').value,
-
-        purpose:
-          document.getElementById('fPurpose').value,
-
-        notes:
-          document.getElementById('fNotes').value
+        patient_id:get("fPatientId").value,
+        follow_up_date:get("fDate").value,
+        purpose:get("fPurpose").value,
+        notes:get("fNotes").value
       }
     );
 
-    msg(
-      'followupMsg',
-      d.message,
-      'success'
+
+    showMessage(
+      "followupMsg",
+      data.message,
+      "success"
     );
 
     loadFollowups();
     loadDashboard();
 
-  }catch(e){
+  }catch(error){
 
-    msg(
-      'followupMsg',
-      e.message,
-      'error'
+    showMessage(
+      "followupMsg",
+      error.message,
+      "error"
     );
 
   }
+
 }
+
 
 async function loadFollowups(){
 
   try{
 
-    var d=await getJson(
-      API+'/api/follow-ups'
-    );
+    var data =
+      await getJson("/api/follow-ups");
 
-    document.getElementById(
-      'followupList'
-    ).innerHTML=
 
-      d.follow_ups.length
+    if(!data.follow_ups.length){
 
-      ?
+      get("followupList").innerHTML =
+        '<div class="muted">No follow-ups.</div>';
 
-      d.follow_ups.map(function(x){
+      return;
 
-        return '<div class="item">'+
+    }
 
-          '<b>#'+
-          escapeHtml(x.id)+
-          ' '+
-          escapeHtml(
-            x.patient_name||
-            ('Patient '+x.patient_id)
-          )+
-          '</b>'+
 
-          '<br>'+
+    get("followupList").innerHTML =
+      data.follow_ups.map(function(item){
 
-          escapeHtml(x.follow_up_date)+
-          ' · '+
-          escapeHtml(x.purpose)+
-          ' · <span class="pill">'+
-          escapeHtml(x.status)+
-          '</span>'+
+        return `
+          <div class="item">
 
-          '<br>'+
+            <b>
+              #${escapeHtml(item.id)}
+              ${escapeHtml(
+                item.patient_name ||
+                ("Patient " + item.patient_id)
+              )}
+            </b>
 
-          escapeHtml(x.notes||'')+
+            <div>
+              Date:
+              ${escapeHtml(item.follow_up_date)}
+            </div>
 
-          '</div>';
+            <div>
+              Purpose:
+              ${escapeHtml(item.purpose)}
+            </div>
 
-      }).join('')
+            <span class="pill">
+              ${escapeHtml(item.status)}
+            </span>
 
-      :
+            <div>
+              ${escapeHtml(item.notes || "")}
+            </div>
 
-      '<p class="muted">No follow-ups.</p>';
+          </div>
+        `;
 
-  }catch(e){
+      }).join("");
 
-    document.getElementById(
-      'followupList'
-    ).textContent=e.message;
+
+  }catch(error){
+
+    get("followupList").textContent =
+      error.message;
 
   }
+
 }
+
 
 function emergency(){
 
   alert(
-    'Emergency escalation: Please contact local emergency medical services or go to the nearest hospital immediately. This prototype does not diagnose emergencies.'
+    "Emergency escalation: Please contact local emergency medical services or go to the nearest hospital immediately. This prototype does not diagnose emergencies."
   );
 
 }
 
-function toggleLang(){
 
-  var s=document.getElementById('subtitle');
+function toggleLanguage(){
 
-  if(
-    s.textContent.indexOf('Integrated')===0
-  ){
+  var button = get("langBtn");
 
-    s.textContent=
-      'ग्रामीण समुदायों के लिए एकीकृत स्वास्थ्य सेवा पहुंच और गुणवत्ता सहायता मंच';
+  var isMarathi =
+    button.getAttribute("data-marathi") === "1";
+
+
+  if(!isMarathi){
+
+    button.setAttribute(
+      "data-marathi",
+      "1"
+    );
+
+    get("welcome").textContent =
+      "घराच्या जवळ आरोग्यसेवा.";
+
+    get("tagline").textContent =
+      "ग्रामीण समुदायांसाठी एकात्मिक आरोग्यसेवा प्रवेश आणि गुणवत्ता सहाय्य मंच";
+
+    get("intro").textContent =
+      "रुग्ण, आरोग्य कर्मचारी आणि डॉक्टर यांना जोडणारे एकच व्यासपीठ.";
 
   }else{
 
-    s.textContent=
-      'Integrated healthcare access & quality support platform for rural communities';
+    button.setAttribute(
+      "data-marathi",
+      "0"
+    );
+
+    get("welcome").textContent =
+      "Healthcare access, closer to home.";
+
+    get("tagline").textContent =
+      "Integrated healthcare access & quality support for rural communities";
+
+    get("intro").textContent =
+      "One connected platform for patients, frontline health workers and doctors — supporting registration, medical records, appointments, referrals and follow-up care.";
 
   }
 
 }
 
-loadDashboard();
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function(){
+
+    document
+      .querySelectorAll(".tab[data-tab]")
+      .forEach(function(button){
+
+        button.addEventListener(
+          "click",
+          function(){
+
+            showTab(
+              this.getAttribute("data-tab")
+            );
+
+          }
+        );
+
+      });
+
+
+    document
+      .querySelectorAll("[data-go]")
+      .forEach(function(button){
+
+        button.addEventListener(
+          "click",
+          function(){
+
+            showTab(
+              this.getAttribute("data-go")
+            );
+
+          }
+        );
+
+      });
+
+
+    get("registerBtn")
+      .addEventListener(
+        "click",
+        registerPatient
+      );
+
+
+    get("searchBtn")
+      .addEventListener(
+        "click",
+        searchPatients
+      );
+
+
+    get("viewRecordBtn")
+      .addEventListener(
+        "click",
+        loadRecord
+      );
+
+
+    get("addRecordBtn")
+      .addEventListener(
+        "click",
+        addMedicalRecord
+      );
+
+
+    get("bookBtn")
+      .addEventListener(
+        "click",
+        bookAppointment
+      );
+
+
+    get("refreshAppointments")
+      .addEventListener(
+        "click",
+        loadAppointments
+      );
+
+
+    get("createReferralBtn")
+      .addEventListener(
+        "click",
+        createReferral
+      );
+
+
+    get("refreshReferrals")
+      .addEventListener(
+        "click",
+        loadReferrals
+      );
+
+
+    get("createFollowupBtn")
+      .addEventListener(
+        "click",
+        createFollowup
+      );
+
+
+    get("refreshFollowups")
+      .addEventListener(
+        "click",
+        loadFollowups
+      );
+
+
+    get("emergencyBtn")
+      .addEventListener(
+        "click",
+        emergency
+      );
+
+
+    get("langBtn")
+      .addEventListener(
+        "click",
+        toggleLanguage
+      );
+
+
+    get("apiTestBtn")
+      .addEventListener(
+        "click",
+        async function(){
+
+          try{
+
+            var data =
+              await getJson("/api/test");
+
+            showMessage(
+              "homeMsg",
+              data.message,
+              "success"
+            );
+
+          }catch(error){
+
+            showMessage(
+              "homeMsg",
+              error.message,
+              "error"
+            );
+
+          }
+
+        }
+      );
+
+
+    loadDashboard();
+
+  }
+);
+
+})();
 
 </script>
 
@@ -1774,14 +2646,25 @@ loadDashboard();
 </html>`;
 }
 
+
 export default {
 
   async fetch(request, env) {
 
-    const url=new URL(request.url);
+    const url =
+      new URL(request.url);
 
-    if(url.pathname.startsWith("/api/"))
-      return api(request,env,url);
+    if(
+      url.pathname.startsWith("/api/")
+    ){
+
+      return api(
+        request,
+        env,
+        url
+      );
+
+    }
 
     return new Response(
       page(),
@@ -1792,6 +2675,7 @@ export default {
         }
       }
     );
+
   }
 
 };
