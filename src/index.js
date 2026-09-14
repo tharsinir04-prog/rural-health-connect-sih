@@ -642,6 +642,16 @@ header {
   box-shadow: 0 8px 25px rgba(28,48,80,0.05);
 }
 
+.clickable-service {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.clickable-service:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+}
+
 .card-icon {
   width: 48px;
   height: 48px;
@@ -1121,7 +1131,7 @@ footer p {
       </p>
     </div>
 
-    <div class="card">
+      <div class="card clickable-service" onclick="openFeature('appointmentPanel')">
       <div class="card-icon">📅</div>
       <h3>Appointments</h3>
       <p>
