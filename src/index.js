@@ -1121,7 +1121,7 @@ footer p {
 
   <div class="cards">
 
-    <div class="card">
+     <div class="card clickable-service" onclick="openFeature('emergencyPanel')">
       <div class="card-icon">🩺</div>
       <h3>Digital Triage</h3>
       <p>
@@ -1140,7 +1140,7 @@ footer p {
       </p>
     </div>
 
-    <div class="card">
+      <div class="card clickable-service" onclick="openFeature('referralPanel')">
       <div class="card-icon">🏥</div>
       <h3>Referral Tracking</h3>
       <p>
@@ -1149,8 +1149,7 @@ footer p {
       </p>
     </div>
 
-    <div class="card">
-      <div class="card-icon">🧾</div>
+      <div class="card clickable-service" onclick="openFeature('searchPanel')">      <div class="card-icon">🧾</div>
       <h3>Medical Records</h3>
       <p>
         Maintain patient medical information so authorized
@@ -1158,7 +1157,7 @@ footer p {
       </p>
     </div>
 
-    <div class="card">
+     <div class="card clickable-service" onclick="openServices()">
       <div class="card-icon">💊</div>
       <h3>Medicine Visibility</h3>
       <p>
@@ -1167,7 +1166,7 @@ footer p {
       </p>
     </div>
 
-    <div class="card">
+     <div class="card clickable-service" onclick="openFeature('followupPanel')">
       <div class="card-icon">❤️</div>
       <h3>Follow-up Care</h3>
       <p>
