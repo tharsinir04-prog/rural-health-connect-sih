@@ -598,6 +598,16 @@ header {
   border-bottom: none;
 }
 
+.clickable-card {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.clickable-card:hover {
+  background: #f2f8fd;
+  transform: translateX(4px);
+}
+
 .section {
   max-width: 1200px;
   margin: auto;
@@ -1035,49 +1045,53 @@ footer p {
 
       <h3>Connected Care</h3>
 
-      <div class="hero-card-item">
-        <span>👨‍⚕️</span>
-        <div>
-          <strong>Doctor Support</strong>
-          <div class="small">
-            Assisted teleconsultation and continuity of care
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-card-item">
-        <span>📋</span>
-        <div>
-          <strong>Digital Records</strong>
-          <div class="small">
-            Longitudinal patient information
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-card-item">
-        <span>🔄</span>
-        <div>
-          <strong>Referral Tracking</strong>
-          <div class="small">
-            Track patients between healthcare facilities
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-card-item">
-        <span>📱</span>
-        <div>
-          <strong>Low Connectivity</strong>
-          <div class="small">
-            Designed for rural and underserved areas
-          </div>
-        </div>
-      </div>
-
+   <div
+  class="hero-card-item clickable-card"
+  onclick="openFeature('appointmentPanel')"
+>
+  <div>
+    <strong>Doctor Support</strong>
+    <div class="small">
+      Assisted teleconsultation and continuity of care
     </div>
-
   </div>
+</div>
+
+<div
+  class="hero-card-item clickable-card"
+  onclick="openFeature('searchPanel')"
+>
+  <div>
+    <strong>Digital Records</strong>
+    <div class="small">
+      Longitudinal patient information
+    </div>
+  </div>
+</div>
+
+<div
+  class="hero-card-item clickable-card"
+  onclick="openFeature('referralPanel')"
+>
+  <div>
+    <strong>Referral Tracking</strong>
+    <div class="small">
+      Track patients between healthcare facilities
+    </div>
+  </div>
+</div>
+
+<div
+  class="hero-card-item clickable-card"
+  onclick="openServices()"
+>
+  <div>
+    <strong>Low Connectivity</strong>
+    <div class="small">
+      Designed for rural and underserved areas
+    </div>
+  </div>
+</div>  
 
 </section>
 
@@ -1909,6 +1923,41 @@ function openServices() {
   }
 }
 
+function openFeature(panelId) {
+
+  const portal = $("portal");
+
+  if (portal) {
+    portal.scrollIntoView({
+      behavior: "smooth"
+    });
+  }
+
+  setTimeout(function() {
+
+    const tabMap = {
+      searchPanel: 1,
+      appointmentPanel: 2,
+      referralPanel: 3
+    };
+
+    const tabIndex = tabMap[panelId];
+
+    const tabs =
+      document.querySelectorAll(".tab");
+
+    if (
+      tabIndex !== undefined &&
+      tabs[tabIndex]
+    ) {
+      activatePanel(
+        panelId,
+        tabs[tabIndex]
+      );
+    }
+
+  }, 500);
+}
 
 function toggleLanguage() {
 
