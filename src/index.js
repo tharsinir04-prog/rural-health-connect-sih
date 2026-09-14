@@ -1331,26 +1331,37 @@ async function loadDashboard() {
 async function registerPatient(event) {
   event.preventDefault();
 
+  const messageBox = $("patientMessage");
+
   const body = {
-    name: $("patientName").value,
+    name: $("patientName").value.trim(),
     age: $("patientAge").value,
     gender: $("patientGender").value,
-    village: $("patientVillage").value,
-    phone: $("patientPhone").value
+    village: $("patientVillage").value.trim(),
+    phone: $("patientPhone").value.trim()
   };
 
+  messageBox.style.display = "block";
+  messageBox.textContent = "Registering patient...";
+
   try {
-    const data = await requestApi("/api/patients", {
+    const response = await fetch("/api/patients", {
       method: "POST",
       headers: {
-        "content-type": "application/json"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(body)
     });
 
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || "Patient registration failed");
+    }
+
     showMessage(
       "patientMessage",
-      "Patient registered successfully. Patient ID: " + data.patient_id,
+      "Patient registered successfully! Patient ID: " + data.patient_id,
       true
     );
 
@@ -1358,9 +1369,11 @@ async function registerPatient(event) {
     loadDashboard();
 
   } catch (error) {
+    console.error("Patient registration error:", error);
+
     showMessage(
       "patientMessage",
-      error.message,
+      "Registration failed: " + error.message,
       false
     );
   }
