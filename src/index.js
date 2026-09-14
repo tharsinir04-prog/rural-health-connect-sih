@@ -4,7 +4,9 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/") {
       return new Response(page(), {
-        headers: { "content-type": "text/html;charset=UTF-8" }
+        headers: {
+          "content-type": "text/html;charset=UTF-8"
+        }
       });
     }
 
@@ -12,7 +14,9 @@ export default {
       return await api(request, env, url);
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response("Not Found", {
+      status: 404
+    });
   }
 };
 
@@ -20,6 +24,9 @@ async function api(request, env, url) {
   const path = url.pathname;
 
   try {
+
+    /* TEST */
+
     if (request.method === "GET" && path === "/api/test") {
       return json({
         success: true,
@@ -27,38 +34,60 @@ async function api(request, env, url) {
       });
     }
 
+
+    /* PATIENT REGISTRATION */
+
     if (request.method === "POST" && path === "/api/patients") {
+
       const body = await request.json();
 
-      if (!body.name || !body.name.trim()) {
-        return json({ success: false, error: "Patient name is required" }, 400);
+      const name = String(body.name || "").trim();
+
+      if (!name) {
+        return json({
+          success: false,
+          error: "Patient name is required"
+        }, 400);
       }
+
+      const age = body.age ? Number(body.age) : null;
+      const gender = String(body.gender || "").trim() || null;
+      const village = String(body.village || "").trim() || null;
+      const phone = String(body.phone || "").trim() || null;
 
       const result = await env.DB.prepare(
         "INSERT INTO patients (name, age, gender, village, phone) VALUES (?, ?, ?, ?, ?)"
       )
         .bind(
-          body.name.trim(),
-          body.age || null,
-          body.gender || null,
-          body.village || null,
-          body.phone || null
+          name,
+          age,
+          gender,
+          village,
+          phone
         )
         .run();
 
       return json({
         success: true,
-        patient_id: result.meta.last_row_id
+        patient_id: result.meta.last_row_id,
+        message: "Patient registered successfully"
       });
     }
 
+
+    /* PATIENT SEARCH */
+
     if (request.method === "GET" && path === "/api/patients") {
+
       const search = url.searchParams.get("search") || "";
 
       const result = await env.DB.prepare(
-        "SELECT * FROM patients WHERE name LIKE ? OR village LIKE ? ORDER BY id DESC LIMIT 50"
+        "SELECT * FROM patients WHERE name LIKE ? OR village LIKE ? ORDER BY id DESC LIMIT 100"
       )
-        .bind("%" + search + "%", "%" + search + "%")
+        .bind(
+          "%" + search + "%",
+          "%" + search + "%"
+        )
         .all();
 
       return json({
@@ -67,7 +96,14 @@ async function api(request, env, url) {
       });
     }
 
-    if (request.method === "GET" && path.startsWith("/api/patients/")) {
+
+    /* COMPLETE PATIENT REPORT */
+
+    if (
+      request.method === "GET" &&
+      path.startsWith("/api/patients/")
+    ) {
+
       const id = path.split("/").pop();
 
       const patient = await env.DB.prepare(
@@ -77,8 +113,12 @@ async function api(request, env, url) {
         .first();
 
       if (!patient) {
-        return json({ success: false, error: "Patient not found" }, 404);
+        return json({
+          success: false,
+          error: "Patient not found"
+        }, 404);
       }
+
 
       const records = await env.DB.prepare(
         "SELECT * FROM medical_records WHERE patient_id = ? ORDER BY id DESC"
@@ -86,11 +126,13 @@ async function api(request, env, url) {
         .bind(id)
         .all();
 
+
       const appointments = await env.DB.prepare(
         "SELECT * FROM appointments WHERE patient_id = ? ORDER BY id DESC"
       )
         .bind(id)
         .all();
+
 
       const referrals = await env.DB.prepare(
         "SELECT * FROM referrals WHERE patient_id = ? ORDER BY id DESC"
@@ -98,11 +140,13 @@ async function api(request, env, url) {
         .bind(id)
         .all();
 
+
       const followups = await env.DB.prepare(
         "SELECT * FROM follow_ups WHERE patient_id = ? ORDER BY id DESC"
       )
         .bind(id)
         .all();
+
 
       return json({
         success: true,
@@ -114,8 +158,22 @@ async function api(request, env, url) {
       });
     }
 
-    if (request.method === "POST" && path === "/api/records") {
+
+    /* MEDICAL RECORD */
+
+    if (
+      request.method === "POST" &&
+      path === "/api/records"
+    ) {
+
       const body = await request.json();
+
+      if (!body.patient_id) {
+        return json({
+          success: false,
+          error: "Patient ID is required"
+        }, 400);
+      }
 
       const result = await env.DB.prepare(
         "INSERT INTO medical_records (patient_id, recorded_by, record_type, notes) VALUES (?, ?, ?, ?)"
@@ -130,12 +188,31 @@ async function api(request, env, url) {
 
       return json({
         success: true,
-        record_id: result.meta.last_row_id
+        record_id: result.meta.last_row_id,
+        message: "Medical record added successfully"
       });
     }
 
-    if (request.method === "POST" && path === "/api/appointments") {
+
+    /* APPOINTMENT CREATE */
+
+    if (
+      request.method === "POST" &&
+      path === "/api/appointments"
+    ) {
+
       const body = await request.json();
+
+      if (
+        !body.patient_id ||
+        !body.appointment_date ||
+        !body.appointment_time
+      ) {
+        return json({
+          success: false,
+          error: "Patient ID, date and time are required"
+        }, 400);
+      }
 
       const result = await env.DB.prepare(
         "INSERT INTO appointments (patient_id, doctor_name, appointment_date, appointment_time, reason) VALUES (?, ?, ?, ?, ?)"
@@ -151,11 +228,19 @@ async function api(request, env, url) {
 
       return json({
         success: true,
-        appointment_id: result.meta.last_row_id
+        appointment_id: result.meta.last_row_id,
+        message: "Appointment booked successfully"
       });
     }
 
-    if (request.method === "GET" && path === "/api/appointments") {
+
+    /* APPOINTMENT LIST */
+
+    if (
+      request.method === "GET" &&
+      path === "/api/appointments"
+    ) {
+
       const result = await env.DB.prepare(
         "SELECT appointments.*, patients.name AS patient_name FROM appointments LEFT JOIN patients ON appointments.patient_id = patients.id ORDER BY appointment_date DESC, appointment_time DESC"
       ).all();
@@ -166,8 +251,22 @@ async function api(request, env, url) {
       });
     }
 
-    if (request.method === "POST" && path === "/api/referrals") {
+
+    /* REFERRAL CREATE */
+
+    if (
+      request.method === "POST" &&
+      path === "/api/referrals"
+    ) {
+
       const body = await request.json();
+
+      if (!body.patient_id) {
+        return json({
+          success: false,
+          error: "Patient ID is required"
+        }, 400);
+      }
 
       const result = await env.DB.prepare(
         "INSERT INTO referrals (patient_id, from_facility, to_facility, reason) VALUES (?, ?, ?, ?)"
@@ -182,11 +281,19 @@ async function api(request, env, url) {
 
       return json({
         success: true,
-        referral_id: result.meta.last_row_id
+        referral_id: result.meta.last_row_id,
+        message: "Referral created successfully"
       });
     }
 
-    if (request.method === "GET" && path === "/api/referrals") {
+
+    /* REFERRAL LIST */
+
+    if (
+      request.method === "GET" &&
+      path === "/api/referrals"
+    ) {
+
       const result = await env.DB.prepare(
         "SELECT referrals.*, patients.name AS patient_name FROM referrals LEFT JOIN patients ON referrals.patient_id = patients.id ORDER BY referral_date DESC"
       ).all();
@@ -197,8 +304,25 @@ async function api(request, env, url) {
       });
     }
 
-    if (request.method === "POST" && path === "/api/followups") {
+
+    /* FOLLOW-UP CREATE */
+
+    if (
+      request.method === "POST" &&
+      path === "/api/followups"
+    ) {
+
       const body = await request.json();
+
+      if (
+        !body.patient_id ||
+        !body.follow_up_date
+      ) {
+        return json({
+          success: false,
+          error: "Patient ID and follow-up date are required"
+        }, 400);
+      }
 
       const result = await env.DB.prepare(
         "INSERT INTO follow_ups (patient_id, follow_up_date, purpose, notes) VALUES (?, ?, ?, ?)"
@@ -213,11 +337,37 @@ async function api(request, env, url) {
 
       return json({
         success: true,
-        followup_id: result.meta.last_row_id
+        followup_id: result.meta.last_row_id,
+        message: "Follow-up scheduled successfully"
       });
     }
 
-    if (request.method === "GET" && path === "/api/dashboard") {
+
+    /* FOLLOW-UP LIST */
+
+    if (
+      request.method === "GET" &&
+      path === "/api/followups"
+    ) {
+
+      const result = await env.DB.prepare(
+        "SELECT follow_ups.*, patients.name AS patient_name FROM follow_ups LEFT JOIN patients ON follow_ups.patient_id = patients.id ORDER BY follow_up_date DESC"
+      ).all();
+
+      return json({
+        success: true,
+        followups: result.results || []
+      });
+    }
+
+
+    /* DASHBOARD */
+
+    if (
+      request.method === "GET" &&
+      path === "/api/dashboard"
+    ) {
+
       const patients = await env.DB.prepare(
         "SELECT COUNT(*) AS count FROM patients"
       ).first();
@@ -236,41 +386,61 @@ async function api(request, env, url) {
 
       return json({
         success: true,
-        patients: patients.count || 0,
-        appointments: appointments.count || 0,
-        referrals: referrals.count || 0,
-        followups: followups.count || 0
+        patients: Number(patients.count || 0),
+        appointments: Number(appointments.count || 0),
+        referrals: Number(referrals.count || 0),
+        followups: Number(followups.count || 0)
       });
     }
 
-    return json({ success: false, error: "API route not found" }, 404);
 
-  } catch (error) {
     return json({
       success: false,
-      error: error.message
+      error: "API route not found"
+    }, 404);
+
+  } catch (error) {
+
+    return json({
+      success: false,
+      error: error.message || "Server error"
     }, 500);
   }
 }
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status: status,
-    headers: {
-      "content-type": "application/json;charset=UTF-8"
+
+function json(data, status) {
+
+  return new Response(
+    JSON.stringify(data),
+    {
+      status: status || 200,
+      headers: {
+        "content-type": "application/json;charset=UTF-8"
+      }
     }
-  });
+  );
 }
+
+
 function page() {
   return `
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0"
+>
+
 <title>Rural Health Connect</title>
 
 <style>
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -615,11 +785,6 @@ header {
   color: white;
 }
 
-.orange {
-  background: #e48718;
-  color: white;
-}
-
 .red {
   background: #c62828;
   color: white;
@@ -730,6 +895,7 @@ footer p {
 }
 
 @media (max-width: 850px) {
+
   .hero-inner {
     grid-template-columns: 1fr;
   }
@@ -760,6 +926,7 @@ footer p {
 }
 
 @media (max-width: 500px) {
+
   .stats {
     grid-template-columns: 1fr;
   }
@@ -772,61 +939,109 @@ footer p {
   .portal {
     padding: 45px 15px;
   }
+
+  .search-box {
+    flex-direction: column;
+  }
 }
+
 </style>
+
 </head>
 
 <body>
 
 <header>
+
   <div class="navbar">
+
     <div class="logo">
       <div class="logo-icon">+</div>
       <span>Rural Health Connect</span>
     </div>
 
     <nav class="nav-links">
-      <a id="homeLink">Home</a>
-      <a id="servicesLink">Services</a>
-      <a id="portalLink">Patient Portal</a>
-      <a id="aboutLink">About</a>
+
+      <a href="#home">
+        Home
+      </a>
+
+      <a href="#services">
+        Services
+      </a>
+
+      <a href="#portal">
+        Patient Portal
+      </a>
+
+      <a href="#about">
+        About
+      </a>
+
     </nav>
 
-    <button class="lang-btn" id="languageBtn">मराठी / English</button>
+    <button
+      class="lang-btn"
+      type="button"
+      onclick="toggleLanguage()"
+    >
+      मराठी / English
+    </button>
+
   </div>
+
 </header>
 
 <section class="hero" id="home">
+
   <div class="hero-inner">
 
     <div>
-      <h1>Healthcare access, closer to home.</h1>
+
+      <h1>
+        Healthcare access, closer to home.
+      </h1>
 
       <p>
-        Rural Health Connect helps communities access healthcare services,
-        maintain continuous medical records, coordinate referrals,
-        manage appointments and support frontline healthcare workers.
+        Rural Health Connect helps rural communities access
+        healthcare services, maintain continuous medical records,
+        coordinate referrals, manage appointments and support
+        frontline healthcare workers.
       </p>
 
       <div class="hero-buttons">
-        <button class="btn btn-primary" id="portalButton">
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          onclick="openPortal()"
+        >
           Open Patient Portal
         </button>
 
-        <button class="btn btn-secondary" id="servicesButton">
+        <button
+          class="btn btn-secondary"
+          type="button"
+          onclick="openServices()"
+        >
           Explore Services
         </button>
+
       </div>
+
     </div>
 
     <div class="hero-card">
+
       <h3>Connected Care</h3>
 
       <div class="hero-card-item">
         <span>👨‍⚕️</span>
         <div>
           <strong>Doctor Support</strong>
-          <div class="small">Assisted teleconsultation and continuity of care</div>
+          <div class="small">
+            Assisted teleconsultation and continuity of care
+          </div>
         </div>
       </div>
 
@@ -834,7 +1049,9 @@ footer p {
         <span>📋</span>
         <div>
           <strong>Digital Records</strong>
-          <div class="small">Longitudinal patient information</div>
+          <div class="small">
+            Longitudinal patient information
+          </div>
         </div>
       </div>
 
@@ -842,7 +1059,9 @@ footer p {
         <span>🔄</span>
         <div>
           <strong>Referral Tracking</strong>
-          <div class="small">Track patients between healthcare facilities</div>
+          <div class="small">
+            Track patients between healthcare facilities
+          </div>
         </div>
       </div>
 
@@ -850,18 +1069,30 @@ footer p {
         <span>📱</span>
         <div>
           <strong>Low Connectivity</strong>
-          <div class="small">Designed for rural and underserved areas</div>
+          <div class="small">
+            Designed for rural and underserved areas
+          </div>
         </div>
       </div>
+
     </div>
 
   </div>
+
 </section>
 
 <section class="section" id="services">
+
   <div class="section-title">
-    <h2>Healthcare Services</h2>
-    <p>One connected platform for rural healthcare support.</p>
+
+    <h2>
+      Healthcare Services
+    </h2>
+
+    <p>
+      One connected platform for rural healthcare support.
+    </p>
+
   </div>
 
   <div class="cards">
@@ -870,8 +1101,9 @@ footer p {
       <div class="card-icon">🩺</div>
       <h3>Digital Triage</h3>
       <p>
-        Support healthcare workers in identifying priority cases
-        and escalating emergencies to appropriate medical teams.
+        Support healthcare workers in identifying priority
+        cases and escalating emergencies to appropriate
+        medical teams.
       </p>
     </div>
 
@@ -879,8 +1111,8 @@ footer p {
       <div class="card-icon">📅</div>
       <h3>Appointments</h3>
       <p>
-        Organize consultations and help reduce unnecessary waiting
-        and travel for patients.
+        Organize consultations and help reduce unnecessary
+        waiting and travel for patients.
       </p>
     </div>
 
@@ -888,8 +1120,8 @@ footer p {
       <div class="card-icon">🏥</div>
       <h3>Referral Tracking</h3>
       <p>
-        Track referrals between sub-centres, PHCs, rural hospitals
-        and district hospitals.
+        Track referrals between sub-centres, PHCs,
+        rural hospitals and district hospitals.
       </p>
     </div>
 
@@ -897,8 +1129,8 @@ footer p {
       <div class="card-icon">🧾</div>
       <h3>Medical Records</h3>
       <p>
-        Maintain patient medical information so authorized healthcare
-        teams can understand previous care.
+        Maintain patient medical information so authorized
+        healthcare teams can understand previous care.
       </p>
     </div>
 
@@ -906,8 +1138,8 @@ footer p {
       <div class="card-icon">💊</div>
       <h3>Medicine Visibility</h3>
       <p>
-        Support visibility of medicine availability and healthcare
-        service requirements.
+        Support visibility of medicine availability and
+        healthcare service requirements.
       </p>
     </div>
 
@@ -915,12 +1147,13 @@ footer p {
       <div class="card-icon">❤️</div>
       <h3>Follow-up Care</h3>
       <p>
-        Help healthcare workers track high-risk, maternal, child
-        and chronic-care follow-ups.
+        Help healthcare workers track high-risk, maternal,
+        child and chronic-care follow-ups.
       </p>
     </div>
 
   </div>
+
 </section>
 
 <section class="portal" id="portal">
@@ -928,298 +1161,653 @@ footer p {
   <div class="portal-inner">
 
     <div class="section-title">
-      <h2>Healthcare Portal</h2>
-      <p>Patient, healthcare worker and doctor support tools.</p>
+
+      <h2>
+        Healthcare Portal
+      </h2>
+
+      <p>
+        Patient, healthcare worker and doctor support tools.
+      </p>
+
     </div>
 
     <div class="stats">
+
       <div class="stat">
-        <div class="stat-number" id="patientCount">0</div>
-        <div class="stat-label">Registered Patients</div>
+        <div
+          class="stat-number"
+          id="patientCount"
+        >
+          0
+        </div>
+        <div class="stat-label">
+          Registered Patients
+        </div>
       </div>
 
       <div class="stat">
-        <div class="stat-number" id="appointmentCount">0</div>
-        <div class="stat-label">Appointments</div>
+        <div
+          class="stat-number"
+          id="appointmentCount"
+        >
+          0
+        </div>
+        <div class="stat-label">
+          Appointments
+        </div>
       </div>
 
       <div class="stat">
-        <div class="stat-number" id="referralCount">0</div>
-        <div class="stat-label">Referrals</div>
+        <div
+          class="stat-number"
+          id="referralCount"
+        >
+          0
+        </div>
+        <div class="stat-label">
+          Referrals
+        </div>
       </div>
 
       <div class="stat">
-        <div class="stat-number" id="followupCount">0</div>
-        <div class="stat-label">Follow-ups</div>
+        <div
+          class="stat-number"
+          id="followupCount"
+        >
+          0
+        </div>
+        <div class="stat-label">
+          Follow-ups
+        </div>
       </div>
+
     </div>
 
     <div class="tabs">
 
-      <button class="tab active" data-panel="registerPanel">
+      <button
+        class="tab active"
+        type="button"
+        onclick="activatePanel('registerPanel', this)"
+      >
         Patient Registration
       </button>
 
-      <button class="tab" data-panel="searchPanel">
+      <button
+        class="tab"
+        type="button"
+        onclick="activatePanel('searchPanel', this)"
+      >
         Patient Records
       </button>
 
-      <button class="tab" data-panel="appointmentPanel">
+      <button
+        class="tab"
+        type="button"
+        onclick="activatePanel('appointmentPanel', this)"
+      >
         Appointments
       </button>
 
-      <button class="tab" data-panel="referralPanel">
+      <button
+        class="tab"
+        type="button"
+        onclick="activatePanel('referralPanel', this)"
+      >
         Referrals
       </button>
 
-      <button class="tab" data-panel="followupPanel">
+      <button
+        class="tab"
+        type="button"
+        onclick="activatePanel('followupPanel', this)"
+      >
         Follow-up
       </button>
 
-      <button class="tab" data-panel="emergencyPanel">
+      <button
+        class="tab"
+        type="button"
+        onclick="activatePanel('emergencyPanel', this)"
+      >
         Emergency
       </button>
 
     </div>
 
-    <div class="panel active" id="registerPanel">
+    <div
+      class="panel active"
+      id="registerPanel"
+    >
 
-      <h2>Register Patient</h2>
+      <h2>
+        Register Patient
+      </h2>
 
-      <form id="patientForm">
+      <form
+        id="patientForm"
+        onsubmit="registerPatient(event)"
+      >
 
         <div class="form-grid">
 
           <div class="field">
-            <label>Patient Name *</label>
-            <input id="patientName" required placeholder="Enter full name">
+
+            <label>
+              Patient Name *
+            </label>
+
+            <input
+              id="patientName"
+              required
+              placeholder="Enter full name"
+            >
+
           </div>
 
           <div class="field">
-            <label>Age</label>
-            <input id="patientAge" type="number" min="0" max="120">
+
+            <label>
+              Age
+            </label>
+
+            <input
+              id="patientAge"
+              type="number"
+              min="0"
+              max="120"
+              placeholder="Age"
+            >
+
           </div>
 
           <div class="field">
-            <label>Gender</label>
+
+            <label>
+              Gender
+            </label>
+
             <select id="patientGender">
-              <option value="">Select</option>
-              <option>Female</option>
-              <option>Male</option>
-              <option>Other</option>
+
+              <option value="">
+                Select
+              </option>
+
+              <option value="Female">
+                Female
+              </option>
+
+              <option value="Male">
+                Male
+              </option>
+
+              <option value="Other">
+                Other
+              </option>
+
             </select>
+
           </div>
 
           <div class="field">
-            <label>Village</label>
-            <input id="patientVillage" placeholder="Village / Area">
+
+            <label>
+              Village
+            </label>
+
+            <input
+              id="patientVillage"
+              placeholder="Village / Area"
+            >
+
           </div>
 
           <div class="field">
-            <label>Phone</label>
-            <input id="patientPhone" type="tel" placeholder="Phone number">
+
+            <label>
+              Phone
+            </label>
+
+            <input
+              id="patientPhone"
+              type="tel"
+              placeholder="Phone number"
+            >
+
           </div>
 
         </div>
 
         <div class="action-row">
-          <button class="btn blue" type="submit">
+
+          <button
+            class="btn blue"
+            type="submit"
+          >
             Register Patient
           </button>
+
         </div>
 
       </form>
 
-      <div class="message" id="patientMessage"></div>
+      <div
+        class="message"
+        id="patientMessage"
+      ></div>
 
     </div>
+        <div
+      class="panel"
+      id="searchPanel"
+    >
 
-    <div class="panel" id="searchPanel">
-
-      <h2>Search Patient</h2>
+      <h2>
+        Patient Records
+      </h2>
 
       <div class="search-box">
-        <input id="patientSearch" placeholder="Search by patient name or village">
-        <button class="btn blue" id="searchPatientButton">
+
+        <input
+          id="patientSearch"
+          placeholder="Search by patient name or village"
+          onkeydown="if(event.key === 'Enter'){event.preventDefault();searchPatients();}"
+        >
+
+        <button
+          class="btn blue"
+          type="button"
+          onclick="searchPatients()"
+        >
           Search
         </button>
+
       </div>
 
-      <div class="patient-list" id="patientList">
-        <div class="empty">Search for a patient to view records.</div>
+      <div
+        class="patient-list"
+        id="patientList"
+      >
+
+        <div class="empty">
+          Search for a patient to view the complete medical report.
+        </div>
+
       </div>
 
       <div id="patientRecord"></div>
 
     </div>
 
-    <div class="panel" id="appointmentPanel">
 
-      <h2>Book Appointment</h2>
+    <div
+      class="panel"
+      id="appointmentPanel"
+    >
 
-      <form id="appointmentForm">
+      <h2>
+        Book Appointment
+      </h2>
+
+      <form
+        id="appointmentForm"
+        onsubmit="bookAppointment(event)"
+      >
 
         <div class="form-grid">
 
           <div class="field">
-            <label>Patient ID *</label>
-            <input id="appointmentPatientId" required>
+
+            <label>
+              Patient ID *
+            </label>
+
+            <input
+              id="appointmentPatientId"
+              required
+              placeholder="Patient ID"
+            >
+
           </div>
 
           <div class="field">
-            <label>Doctor Name</label>
-            <input id="doctorName" placeholder="Doctor name">
+
+            <label>
+              Doctor Name
+            </label>
+
+            <input
+              id="doctorName"
+              placeholder="Doctor name"
+            >
+
           </div>
 
           <div class="field">
-            <label>Date *</label>
-            <input id="appointmentDate" type="date" required>
+
+            <label>
+              Date *
+            </label>
+
+            <input
+              id="appointmentDate"
+              type="date"
+              required
+            >
+
           </div>
 
           <div class="field">
-            <label>Time *</label>
-            <input id="appointmentTime" type="time" required>
+
+            <label>
+              Time *
+            </label>
+
+            <input
+              id="appointmentTime"
+              type="time"
+              required
+            >
+
           </div>
 
           <div class="field full">
-            <label>Reason</label>
-            <textarea id="appointmentReason" placeholder="Reason for consultation"></textarea>
+
+            <label>
+              Reason
+            </label>
+
+            <textarea
+              id="appointmentReason"
+              placeholder="Reason for consultation"
+            ></textarea>
+
           </div>
 
         </div>
 
         <div class="action-row">
-          <button class="btn blue" type="submit">
+
+          <button
+            class="btn blue"
+            type="submit"
+          >
             Book Appointment
           </button>
+
         </div>
 
       </form>
 
-      <div class="message" id="appointmentMessage"></div>
+      <div
+        class="message"
+        id="appointmentMessage"
+      ></div>
 
       <div class="record-section">
-        <h3>Recent Appointments</h3>
-        <div class="record-list" id="appointmentList"></div>
+
+        <h3>
+          Recent Appointments
+        </h3>
+
+        <div
+          class="record-list"
+          id="appointmentList"
+        ></div>
+
       </div>
 
     </div>
 
-    <div class="panel" id="referralPanel">
 
-      <h2>Create Referral</h2>
+    <div
+      class="panel"
+      id="referralPanel"
+    >
 
-      <form id="referralForm">
+      <h2>
+        Create Referral
+      </h2>
+
+      <form
+        id="referralForm"
+        onsubmit="createReferral(event)"
+      >
 
         <div class="form-grid">
 
           <div class="field">
-            <label>Patient ID *</label>
-            <input id="referralPatientId" required>
+
+            <label>
+              Patient ID *
+            </label>
+
+            <input
+              id="referralPatientId"
+              required
+              placeholder="Patient ID"
+            >
+
           </div>
 
           <div class="field">
-            <label>From Facility</label>
-            <input id="fromFacility" placeholder="Current facility">
+
+            <label>
+              From Facility
+            </label>
+
+            <input
+              id="fromFacility"
+              placeholder="Current facility"
+            >
+
           </div>
 
           <div class="field">
-            <label>To Facility</label>
-            <input id="toFacility" placeholder="Referral facility">
+
+            <label>
+              To Facility
+            </label>
+
+            <input
+              id="toFacility"
+              placeholder="Referral facility"
+            >
+
           </div>
 
           <div class="field full">
-            <label>Reason</label>
-            <textarea id="referralReason" placeholder="Reason for referral"></textarea>
+
+            <label>
+              Reason
+            </label>
+
+            <textarea
+              id="referralReason"
+              placeholder="Reason for referral"
+            ></textarea>
+
           </div>
 
         </div>
 
         <div class="action-row">
-          <button class="btn blue" type="submit">
+
+          <button
+            class="btn blue"
+            type="submit"
+          >
             Create Referral
           </button>
+
         </div>
 
       </form>
 
-      <div class="message" id="referralMessage"></div>
+      <div
+        class="message"
+        id="referralMessage"
+      ></div>
 
       <div class="record-section">
-        <h3>Recent Referrals</h3>
-        <div class="record-list" id="referralList"></div>
+
+        <h3>
+          Recent Referrals
+        </h3>
+
+        <div
+          class="record-list"
+          id="referralList"
+        ></div>
+
       </div>
 
     </div>
 
-    <div class="panel" id="followupPanel">
 
-      <h2>Follow-up Care</h2>
+    <div
+      class="panel"
+      id="followupPanel"
+    >
 
-      <form id="followupForm">
+      <h2>
+        Follow-up Care
+      </h2>
+
+      <form
+        id="followupForm"
+        onsubmit="createFollowup(event)"
+      >
 
         <div class="form-grid">
 
           <div class="field">
-            <label>Patient ID *</label>
-            <input id="followupPatientId" required>
+
+            <label>
+              Patient ID *
+            </label>
+
+            <input
+              id="followupPatientId"
+              required
+              placeholder="Patient ID"
+            >
+
           </div>
 
           <div class="field">
-            <label>Follow-up Date *</label>
-            <input id="followupDate" type="date" required>
+
+            <label>
+              Follow-up Date *
+            </label>
+
+            <input
+              id="followupDate"
+              type="date"
+              required
+            >
+
           </div>
 
           <div class="field full">
-            <label>Purpose</label>
-            <input id="followupPurpose" placeholder="Follow-up purpose">
+
+            <label>
+              Purpose
+            </label>
+
+            <input
+              id="followupPurpose"
+              placeholder="Follow-up purpose"
+            >
+
           </div>
 
           <div class="field full">
-            <label>Notes</label>
-            <textarea id="followupNotes" placeholder="Follow-up notes"></textarea>
+
+            <label>
+              Notes
+            </label>
+
+            <textarea
+              id="followupNotes"
+              placeholder="Follow-up notes"
+            ></textarea>
+
           </div>
 
         </div>
 
         <div class="action-row">
-          <button class="btn blue" type="submit">
+
+          <button
+            class="btn blue"
+            type="submit"
+          >
             Schedule Follow-up
           </button>
+
         </div>
 
       </form>
 
-      <div class="message" id="followupMessage"></div>
+      <div
+        class="message"
+        id="followupMessage"
+      ></div>
 
       <div class="record-section">
-        <h3>Follow-up Records</h3>
-        <div class="record-list" id="followupList"></div>
+
+        <h3>
+          Follow-up Records
+        </h3>
+
+        <div
+          class="record-list"
+          id="followupList"
+        ></div>
+
       </div>
 
     </div>
 
-    <div class="panel" id="emergencyPanel">
+
+    <div
+      class="panel"
+      id="emergencyPanel"
+    >
 
       <div class="emergency-box">
 
-        <h2>🚨 Emergency Escalation</h2>
+        <h2>
+          🚨 Emergency Escalation
+        </h2>
 
         <p style="margin-top:10px;">
-          If a patient has a serious or rapidly worsening condition,
-          immediately contact the appropriate emergency medical service
-          or trained healthcare professional.
+
+          If a patient has a serious or rapidly worsening
+          condition, immediately contact the appropriate
+          emergency medical service or trained healthcare
+          professional.
+
         </p>
 
         <div class="action-row">
 
-          <button class="btn red" id="emergencyButton">
+          <button
+            class="btn red"
+            type="button"
+            onclick="emergencyEscalation()"
+          >
             Escalate Emergency
           </button>
 
         </div>
 
-        <div class="message" id="emergencyMessage"></div>
+        <div
+          class="message"
+          id="emergencyMessage"
+        ></div>
 
       </div>
 
@@ -1229,646 +1817,1301 @@ footer p {
 
 </section>
 
+
 <footer id="about">
-  <p><strong>Rural Health Connect</strong></p>
+
+  <p>
+    <strong>
+      Rural Health Connect
+    </strong>
+  </p>
+
   <p>
     Integrated healthcare access and quality support platform
     for rural communities.
   </p>
+
   <p style="margin-top:10px;">
     Built for Smart India Hackathon
   </p>
+
 </footer>
+
 
 <script>
 
-const $ = function(id) {
+function $(id) {
   return document.getElementById(id);
-};
-
-function showMessage(id, text, success) {
-  const box = $(id);
-
-  if (!box) return;
-
-  box.textContent = text;
-  box.className = "message show " + (success ? "success" : "error");
 }
 
+
+function showMessage(id, text, success) {
+
+  const box = $(id);
+
+  if (!box) {
+    return;
+  }
+
+  box.textContent = text;
+
+  box.className =
+    "message show " +
+    (success ? "success" : "error");
+}
+
+
 async function requestApi(url, options) {
-  const response = await fetch(url, options);
-  const data = await response.json();
+
+  const response = await fetch(url, options || {});
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(
+      "Server returned an invalid response"
+    );
+  }
 
   if (!response.ok || data.success === false) {
-    throw new Error(data.error || "Something went wrong");
+
+    throw new Error(
+      data.error || "Request failed"
+    );
   }
 
   return data;
 }
 
+
 function openPortal() {
-  $("portal").scrollIntoView({
-    behavior: "smooth"
-  });
+
+  const portal = $("portal");
+
+  if (portal) {
+    portal.scrollIntoView({
+      behavior: "smooth"
+    });
+  }
 }
+
 
 function openServices() {
-  $("services").scrollIntoView({
-    behavior: "smooth"
-  });
+
+  const services = $("services");
+
+  if (services) {
+    services.scrollIntoView({
+      behavior: "smooth"
+    });
+  }
 }
 
-function openHome() {
-  $("home").scrollIntoView({
-    behavior: "smooth"
-  });
+
+function toggleLanguage() {
+
+  alert(
+    "Marathi and English interface is available. Additional multilingual support can be added."
+  );
 }
 
-function openAbout() {
-  $("about").scrollIntoView({
-    behavior: "smooth"
-  });
-}
 
-function activatePanel(panelId) {
-  const panels = document.querySelectorAll(".panel");
-  const tabs = document.querySelectorAll(".tab");
+function activatePanel(panelId, clickedTab) {
+
+  const panels =
+    document.querySelectorAll(".panel");
+
+  const tabs =
+    document.querySelectorAll(".tab");
 
   panels.forEach(function(panel) {
+
     panel.classList.remove("active");
+
   });
 
   tabs.forEach(function(tab) {
+
     tab.classList.remove("active");
+
   });
 
-  const panel = $(panelId);
+  const selectedPanel = $(panelId);
 
-  if (panel) {
-    panel.classList.add("active");
+  if (selectedPanel) {
+
+    selectedPanel.classList.add("active");
+
   }
 
-  tabs.forEach(function(tab) {
-    if (tab.getAttribute("data-panel") === panelId) {
-      tab.classList.add("active");
-    }
-  });
+  if (clickedTab) {
+
+    clickedTab.classList.add("active");
+
+  }
+
 }
+
 
 async function loadDashboard() {
-  try {
-    const data = await requestApi("/api/dashboard");
 
-    $("patientCount").textContent = data.patients;
-    $("appointmentCount").textContent = data.appointments;
-    $("referralCount").textContent = data.referrals;
-    $("followupCount").textContent = data.followups;
+  try {
+
+    const data =
+      await requestApi("/api/dashboard");
+
+    $("patientCount").textContent =
+      data.patients;
+
+    $("appointmentCount").textContent =
+      data.appointments;
+
+    $("referralCount").textContent =
+      data.referrals;
+
+    $("followupCount").textContent =
+      data.followups;
+
   } catch (error) {
-    console.log(error);
+
+    console.log(
+      "Dashboard:",
+      error.message
+    );
+
   }
 }
 
+
+/* PATIENT REGISTRATION */
+
 async function registerPatient(event) {
+
   event.preventDefault();
 
-  const messageBox = $("patientMessage");
+  const messageBox =
+    $("patientMessage");
+
+  showMessage(
+    "patientMessage",
+    "Registering patient...",
+    true
+  );
 
   const body = {
-    name: $("patientName").value.trim(),
-    age: $("patientAge").value,
-    gender: $("patientGender").value,
-    village: $("patientVillage").value.trim(),
-    phone: $("patientPhone").value.trim()
+
+    name:
+      $("patientName").value.trim(),
+
+    age:
+      $("patientAge").value,
+
+    gender:
+      $("patientGender").value,
+
+    village:
+      $("patientVillage").value.trim(),
+
+    phone:
+      $("patientPhone").value.trim()
+
   };
 
-  messageBox.style.display = "block";
-  messageBox.textContent = "Registering patient...";
-
   try {
-    const response = await fetch("/api/patients", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
 
-    const data = await response.json();
+    const data =
+      await requestApi(
+        "/api/patients",
+        {
+          method: "POST",
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || "Patient registration failed");
-    }
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(body)
+        }
+      );
 
     showMessage(
       "patientMessage",
-      "Patient registered successfully! Patient ID: " + data.patient_id,
+      "Patient registered successfully! Patient ID: " +
+        data.patient_id,
       true
     );
 
     $("patientForm").reset();
-    loadDashboard();
+
+    await loadDashboard();
 
   } catch (error) {
-    console.error("Patient registration error:", error);
+
+    console.error(
+      "Registration error:",
+      error
+    );
 
     showMessage(
       "patientMessage",
-      "Registration failed: " + error.message,
+      "Registration failed: " +
+        error.message,
       false
     );
+
   }
+
 }
 
+
+/* PATIENT SEARCH */
+
 async function searchPatients() {
-  const search = $("patientSearch").value.trim();
+
+  const search =
+    $("patientSearch").value.trim();
+
+  const list =
+    $("patientList");
+
+  list.innerHTML =
+    '<div class="empty">Searching...</div>';
 
   try {
-    const data = await requestApi(
-      "/api/patients?search=" + encodeURIComponent(search)
-    );
 
-    const list = $("patientList");
+    const data =
+      await requestApi(
+        "/api/patients?search=" +
+        encodeURIComponent(search)
+      );
+
     list.innerHTML = "";
 
-    if (!data.patients || data.patients.length === 0) {
-      list.innerHTML = '<div class="empty">No patients found.</div>';
+    if (
+      !data.patients ||
+      data.patients.length === 0
+    ) {
+
+      list.innerHTML =
+        '<div class="empty">No patients found.</div>';
+
       return;
     }
 
-    data.patients.forEach(function(patient) {
-      const card = document.createElement("div");
+    data.patients.forEach(
+      function(patient) {
 
-      card.className = "patient-card";
+        const card =
+          document.createElement("div");
 
-      card.innerHTML =
-        '<div class="patient-name">' +
-        escapeHtml(patient.name) +
-        "</div>" +
-        '<div class="small">Patient ID: ' +
-        escapeHtml(String(patient.id)) +
-        "</div>" +
-        '<div class="small">Age: ' +
-        escapeHtml(String(patient.age || "-")) +
-        " | Gender: " +
-        escapeHtml(patient.gender || "-") +
-        "</div>" +
-        '<div class="small">Village: ' +
-        escapeHtml(patient.village || "-") +
-        "</div>";
+        card.className =
+          "patient-card";
 
-      card.addEventListener("click", function() {
-        loadPatientRecord(patient.id);
-      });
+        card.innerHTML =
 
-      list.appendChild(card);
-    });
+          '<div class="patient-name">' +
+          escapeHtml(patient.name) +
+          "</div>" +
+
+          '<div class="small">' +
+          "Patient ID: " +
+          escapeHtml(
+            String(patient.id)
+          ) +
+          "</div>" +
+
+          '<div class="small">' +
+          "Age: " +
+          escapeHtml(
+            String(patient.age || "-")
+          ) +
+          " | Gender: " +
+          escapeHtml(
+            patient.gender || "-"
+          ) +
+          "</div>" +
+
+          '<div class="small">' +
+          "Village: " +
+          escapeHtml(
+            patient.village || "-"
+          ) +
+          "</div>";
+
+        card.onclick =
+          function() {
+
+            loadPatientRecord(
+              patient.id
+            );
+
+          };
+
+        list.appendChild(card);
+
+      }
+    );
 
   } catch (error) {
-    $("patientList").innerHTML =
+
+    list.innerHTML =
       '<div class="empty">' +
       escapeHtml(error.message) +
       "</div>";
+
   }
+
 }
+
+
+/* COMPLETE MEDICAL REPORT */
 
 async function loadPatientRecord(patientId) {
+
+  const recordBox =
+    $("patientRecord");
+
+  recordBox.innerHTML =
+    '<div class="message show success">' +
+    "Loading medical report..." +
+    "</div>";
+
   try {
-    const data = await requestApi(
-      "/api/patients/" + encodeURIComponent(patientId)
-    );
+
+    const data =
+      await requestApi(
+        "/api/patients/" +
+        encodeURIComponent(patientId)
+      );
 
     let html =
+
       '<div class="record-section">' +
+
       "<h3>Patient Medical Report</h3>" +
+
       '<div class="item">' +
+
       "<strong>" +
-      escapeHtml(data.patient.name) +
+      escapeHtml(
+        data.patient.name
+      ) +
       "</strong><br>" +
+
       "Patient ID: " +
-      escapeHtml(String(data.patient.id)) +
+      escapeHtml(
+        String(data.patient.id)
+      ) +
       "<br>" +
+
       "Age: " +
-      escapeHtml(String(data.patient.age || "-")) +
+      escapeHtml(
+        String(
+          data.patient.age || "-"
+        )
+      ) +
       "<br>" +
+
       "Gender: " +
-      escapeHtml(data.patient.gender || "-") +
+      escapeHtml(
+        data.patient.gender || "-"
+      ) +
       "<br>" +
+
       "Village: " +
-      escapeHtml(data.patient.village || "-") +
+      escapeHtml(
+        data.patient.village || "-"
+      ) +
       "<br>" +
+
       "Phone: " +
-      escapeHtml(data.patient.phone || "-") +
+      escapeHtml(
+        data.patient.phone || "-"
+      ) +
+
       "</div>" +
+
       "</div>";
 
-    html += '<div class="record-section"><h3>Medical Records</h3>';
 
-    if (data.records.length === 0) {
-      html += '<div class="empty">No medical records yet.</div>';
+    html +=
+      '<div class="record-section">' +
+      "<h3>Medical Records</h3>";
+
+
+    if (
+      data.records.length === 0
+    ) {
+
+      html +=
+        '<div class="empty">' +
+        "No medical records yet." +
+        "</div>";
+
     } else {
-      data.records.forEach(function(record) {
-        html +=
-          '<div class="item">' +
-          "<strong>" +
-          escapeHtml(record.record_type || "General") +
-          "</strong><br>" +
-          escapeHtml(record.notes || "") +
-          '<div class="small">Recorded by: ' +
-          escapeHtml(record.recorded_by || "-") +
-          "</div>" +
-          "</div>";
-      });
+
+      data.records.forEach(
+        function(record) {
+
+          html +=
+
+            '<div class="item">' +
+
+            "<strong>" +
+            escapeHtml(
+              record.record_type ||
+              "General"
+            ) +
+            "</strong><br>" +
+
+            escapeHtml(
+              record.notes || ""
+            ) +
+
+            '<div class="small">' +
+            "Recorded by: " +
+            escapeHtml(
+              record.recorded_by ||
+              "-"
+            ) +
+            "</div>" +
+
+            "</div>";
+
+        }
+      );
+
     }
 
     html += "</div>";
 
-    html += '<div class="record-section"><h3>Appointments</h3>';
 
-    if (data.appointments.length === 0) {
-      html += '<div class="empty">No appointments.</div>';
+    html +=
+      '<div class="record-section">' +
+      "<h3>Appointments</h3>";
+
+
+    if (
+      data.appointments.length === 0
+    ) {
+
+      html +=
+        '<div class="empty">' +
+        "No appointments." +
+        "</div>";
+
     } else {
-      data.appointments.forEach(function(item) {
-        html +=
-          '<div class="item">' +
-          "Doctor: " +
-          escapeHtml(item.doctor_name || "-") +
-          "<br>" +
-          "Date: " +
-          escapeHtml(item.appointment_date) +
-          "<br>" +
-          "Time: " +
-          escapeHtml(item.appointment_time) +
-          "<br>" +
-          "Status: " +
-          escapeHtml(item.status || "pending") +
-          "<br>" +
-          "Reason: " +
-          escapeHtml(item.reason || "-") +
-          "</div>";
-      });
+
+      data.appointments.forEach(
+        function(item) {
+
+          html +=
+
+            '<div class="item">' +
+
+            "Doctor: " +
+            escapeHtml(
+              item.doctor_name || "-"
+            ) +
+
+            "<br>" +
+
+            "Date: " +
+            escapeHtml(
+              item.appointment_date
+            ) +
+
+            "<br>" +
+
+            "Time: " +
+            escapeHtml(
+              item.appointment_time
+            ) +
+
+            "<br>" +
+
+            "Status: " +
+            escapeHtml(
+              item.status || "pending"
+            ) +
+
+            "<br>" +
+
+            "Reason: " +
+            escapeHtml(
+              item.reason || "-"
+            ) +
+
+            "</div>";
+
+        }
+      );
+
     }
 
     html += "</div>";
 
-    html += '<div class="record-section"><h3>Referrals</h3>';
 
-    if (data.referrals.length === 0) {
-      html += '<div class="empty">No referrals.</div>';
+    html +=
+      '<div class="record-section">' +
+      "<h3>Referrals</h3>";
+
+
+    if (
+      data.referrals.length === 0
+    ) {
+
+      html +=
+        '<div class="empty">' +
+        "No referrals." +
+        "</div>";
+
     } else {
-      data.referrals.forEach(function(item) {
-        html +=
-          '<div class="item">' +
-          "From: " +
-          escapeHtml(item.from_facility || "-") +
-          "<br>" +
-          "To: " +
-          escapeHtml(item.to_facility || "-") +
-          "<br>" +
-          "Reason: " +
-          escapeHtml(item.reason || "-") +
-          "<br>" +
-          "Status: " +
-          escapeHtml(item.status || "pending") +
-          "</div>";
-      });
+
+      data.referrals.forEach(
+        function(item) {
+
+          html +=
+
+            '<div class="item">' +
+
+            "From: " +
+            escapeHtml(
+              item.from_facility || "-"
+            ) +
+
+            "<br>" +
+
+            "To: " +
+            escapeHtml(
+              item.to_facility || "-"
+            ) +
+
+            "<br>" +
+
+            "Reason: " +
+            escapeHtml(
+              item.reason || "-"
+            ) +
+
+            "<br>" +
+
+            "Status: " +
+            escapeHtml(
+              item.status || "pending"
+            ) +
+
+            "</div>";
+
+        }
+      );
+
     }
 
     html += "</div>";
 
-    html += '<div class="record-section"><h3>Follow-up</h3>';
 
-    if (data.followups.length === 0) {
-      html += '<div class="empty">No follow-up records.</div>';
+    html +=
+      '<div class="record-section">' +
+      "<h3>Follow-up</h3>";
+
+
+    if (
+      data.followups.length === 0
+    ) {
+
+      html +=
+        '<div class="empty">' +
+        "No follow-up records." +
+        "</div>";
+
     } else {
-      data.followups.forEach(function(item) {
-        html +=
-          '<div class="item">' +
-          "Date: " +
-          escapeHtml(item.follow_up_date) +
-          "<br>" +
-          "Purpose: " +
-          escapeHtml(item.purpose || "-") +
-          "<br>" +
-          "Status: " +
-          escapeHtml(item.status || "pending") +
-          "<br>" +
-          "Notes: " +
-          escapeHtml(item.notes || "-") +
-          "</div>";
-      });
+
+      data.followups.forEach(
+        function(item) {
+
+          html +=
+
+            '<div class="item">' +
+
+            "Date: " +
+            escapeHtml(
+              item.follow_up_date
+            ) +
+
+            "<br>" +
+
+            "Purpose: " +
+            escapeHtml(
+              item.purpose || "-"
+            ) +
+
+            "<br>" +
+
+            "Status: " +
+            escapeHtml(
+              item.status || "pending"
+            ) +
+
+            "<br>" +
+
+            "Notes: " +
+            escapeHtml(
+              item.notes || "-"
+            ) +
+
+            "</div>";
+
+        }
+      );
+
     }
 
     html += "</div>";
 
-    $("patientRecord").innerHTML = html;
+
+    recordBox.innerHTML = html;
 
   } catch (error) {
-    $("patientRecord").innerHTML =
+
+    recordBox.innerHTML =
       '<div class="message show error">' +
-      escapeHtml(error.message) +
+      escapeHtml(
+        error.message
+      ) +
       "</div>";
+
   }
+
 }
+/* ADD MEDICAL RECORD */
 
 async function addMedicalRecord() {
-  const patientId = prompt("Enter Patient ID:");
 
-  if (!patientId) return;
+  const patientId =
+    prompt("Enter Patient ID:");
 
-  const notes = prompt("Enter medical record notes:");
+  if (!patientId) {
+    return;
+  }
 
-  if (!notes) return;
+  const notes =
+    prompt("Enter medical record notes:");
+
+  if (!notes) {
+    return;
+  }
 
   try {
-    await requestApi("/api/records", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        patient_id: patientId,
-        recorded_by: "Health Worker",
-        record_type: "General",
-        notes: notes
-      })
-    });
 
-    alert("Medical record added successfully.");
-    loadPatientRecord(patientId);
+    await requestApi(
+      "/api/records",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+
+          patient_id:
+            patientId,
+
+          recorded_by:
+            "Health Worker",
+
+          record_type:
+            "General",
+
+          notes:
+            notes
+
+        })
+      }
+    );
+
+    alert(
+      "Medical record added successfully."
+    );
+
+    loadPatientRecord(
+      patientId
+    );
+
+    loadDashboard();
 
   } catch (error) {
-    alert(error.message);
+
+    alert(
+      "Error: " +
+      error.message
+    );
+
   }
+
 }
 
+
+/* APPOINTMENT */
+
 async function bookAppointment(event) {
+
   event.preventDefault();
 
+  showMessage(
+    "appointmentMessage",
+    "Booking appointment...",
+    true
+  );
+
   try {
-    const data = await requestApi("/api/appointments", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        patient_id: $("appointmentPatientId").value,
-        doctor_name: $("doctorName").value,
-        appointment_date: $("appointmentDate").value,
-        appointment_time: $("appointmentTime").value,
-        reason: $("appointmentReason").value
-      })
-    });
+
+    const data =
+      await requestApi(
+        "/api/appointments",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            patient_id:
+              $("appointmentPatientId").value,
+
+            doctor_name:
+              $("doctorName").value,
+
+            appointment_date:
+              $("appointmentDate").value,
+
+            appointment_time:
+              $("appointmentTime").value,
+
+            reason:
+              $("appointmentReason").value
+
+          })
+        }
+      );
 
     showMessage(
       "appointmentMessage",
-      "Appointment booked successfully. ID: " + data.appointment_id,
+      "Appointment booked successfully. ID: " +
+        data.appointment_id,
       true
     );
 
     $("appointmentForm").reset();
-    loadDashboard();
-    loadAppointments();
+
+    await loadDashboard();
+
+    await loadAppointments();
 
   } catch (error) {
+
     showMessage(
       "appointmentMessage",
-      error.message,
+      "Booking failed: " +
+        error.message,
       false
     );
+
   }
+
 }
 
+
 async function loadAppointments() {
+
   try {
-    const data = await requestApi("/api/appointments");
-    const list = $("appointmentList");
+
+    const data =
+      await requestApi(
+        "/api/appointments"
+      );
+
+    const list =
+      $("appointmentList");
 
     list.innerHTML = "";
 
-    if (data.appointments.length === 0) {
+    if (
+      data.appointments.length === 0
+    ) {
+
       list.innerHTML =
-        '<div class="empty">No appointments available.</div>';
+        '<div class="empty">' +
+        "No appointments available." +
+        "</div>";
+
       return;
     }
 
-    data.appointments.forEach(function(item) {
-      const div = document.createElement("div");
+    data.appointments.forEach(
+      function(item) {
 
-      div.className = "item";
+        const div =
+          document.createElement("div");
 
-      div.innerHTML =
-        "<strong>" +
-        escapeHtml(item.patient_name || "Patient") +
-        "</strong><br>" +
-        "Doctor: " +
-        escapeHtml(item.doctor_name || "-") +
-        "<br>" +
-        "Date: " +
-        escapeHtml(item.appointment_date) +
-        "<br>" +
-        "Time: " +
-        escapeHtml(item.appointment_time) +
-        "<br>" +
-        "Status: " +
-        escapeHtml(item.status || "pending");
+        div.className =
+          "item";
 
-      list.appendChild(div);
-    });
+        div.innerHTML =
+
+          "<strong>" +
+          escapeHtml(
+            item.patient_name ||
+            "Patient"
+          ) +
+          "</strong><br>" +
+
+          "Doctor: " +
+          escapeHtml(
+            item.doctor_name || "-"
+          ) +
+
+          "<br>" +
+
+          "Date: " +
+          escapeHtml(
+            item.appointment_date
+          ) +
+
+          "<br>" +
+
+          "Time: " +
+          escapeHtml(
+            item.appointment_time
+          ) +
+
+          "<br>" +
+
+          "Status: " +
+          escapeHtml(
+            item.status ||
+            "pending"
+          );
+
+        list.appendChild(div);
+
+      }
+    );
 
   } catch (error) {
-    console.log(error);
+
+    console.log(
+      "Appointments:",
+      error.message
+    );
+
   }
+
 }
 
+
+/* REFERRAL */
+
 async function createReferral(event) {
+
   event.preventDefault();
 
+  showMessage(
+    "referralMessage",
+    "Creating referral...",
+    true
+  );
+
   try {
-    const data = await requestApi("/api/referrals", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        patient_id: $("referralPatientId").value,
-        from_facility: $("fromFacility").value,
-        to_facility: $("toFacility").value,
-        reason: $("referralReason").value
-      })
-    });
+
+    const data =
+      await requestApi(
+        "/api/referrals",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            patient_id:
+              $("referralPatientId").value,
+
+            from_facility:
+              $("fromFacility").value,
+
+            to_facility:
+              $("toFacility").value,
+
+            reason:
+              $("referralReason").value
+
+          })
+        }
+      );
 
     showMessage(
       "referralMessage",
-      "Referral created successfully. ID: " + data.referral_id,
+      "Referral created successfully. ID: " +
+        data.referral_id,
       true
     );
 
     $("referralForm").reset();
-    loadDashboard();
-    loadReferrals();
+
+    await loadDashboard();
+
+    await loadReferrals();
 
   } catch (error) {
+
     showMessage(
       "referralMessage",
-      error.message,
+      "Referral failed: " +
+        error.message,
       false
     );
+
   }
+
 }
 
+
 async function loadReferrals() {
+
   try {
-    const data = await requestApi("/api/referrals");
-    const list = $("referralList");
+
+    const data =
+      await requestApi(
+        "/api/referrals"
+      );
+
+    const list =
+      $("referralList");
 
     list.innerHTML = "";
 
-    if (data.referrals.length === 0) {
+    if (
+      data.referrals.length === 0
+    ) {
+
       list.innerHTML =
-        '<div class="empty">No referrals available.</div>';
+        '<div class="empty">' +
+        "No referrals available." +
+        "</div>";
+
       return;
     }
 
-    data.referrals.forEach(function(item) {
-      const div = document.createElement("div");
+    data.referrals.forEach(
+      function(item) {
 
-      div.className = "item";
+        const div =
+          document.createElement("div");
 
-      div.innerHTML =
-        "<strong>" +
-        escapeHtml(item.patient_name || "Patient") +
-        "</strong><br>" +
-        "From: " +
-        escapeHtml(item.from_facility || "-") +
-        "<br>" +
-        "To: " +
-        escapeHtml(item.to_facility || "-") +
-        "<br>" +
-        "Reason: " +
-        escapeHtml(item.reason || "-") +
-        "<br>" +
-        "Status: " +
-        escapeHtml(item.status || "pending");
+        div.className =
+          "item";
 
-      list.appendChild(div);
-    });
+        div.innerHTML =
+
+          "<strong>" +
+          escapeHtml(
+            item.patient_name ||
+            "Patient"
+          ) +
+          "</strong><br>" +
+
+          "From: " +
+          escapeHtml(
+            item.from_facility || "-"
+          ) +
+
+          "<br>" +
+
+          "To: " +
+          escapeHtml(
+            item.to_facility || "-"
+          ) +
+
+          "<br>" +
+
+          "Reason: " +
+          escapeHtml(
+            item.reason || "-"
+          ) +
+
+          "<br>" +
+
+          "Status: " +
+          escapeHtml(
+            item.status ||
+            "pending"
+          );
+
+        list.appendChild(div);
+
+      }
+    );
 
   } catch (error) {
-    console.log(error);
+
+    console.log(
+      "Referrals:",
+      error.message
+    );
+
   }
+
 }
 
+
+/* FOLLOW-UP */
+
 async function createFollowup(event) {
+
   event.preventDefault();
 
+  showMessage(
+    "followupMessage",
+    "Scheduling follow-up...",
+    true
+  );
+
   try {
-    const data = await requestApi("/api/followups", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        patient_id: $("followupPatientId").value,
-        follow_up_date: $("followupDate").value,
-        purpose: $("followupPurpose").value,
-        notes: $("followupNotes").value
-      })
-    });
+
+    const data =
+      await requestApi(
+        "/api/followups",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+
+            patient_id:
+              $("followupPatientId").value,
+
+            follow_up_date:
+              $("followupDate").value,
+
+            purpose:
+              $("followupPurpose").value,
+
+            notes:
+              $("followupNotes").value
+
+          })
+        }
+      );
 
     showMessage(
       "followupMessage",
-      "Follow-up scheduled successfully. ID: " + data.followup_id,
+      "Follow-up scheduled successfully. ID: " +
+        data.followup_id,
       true
     );
 
     $("followupForm").reset();
-    loadDashboard();
-    loadFollowups();
+
+    await loadDashboard();
+
+    await loadFollowups();
 
   } catch (error) {
+
     showMessage(
       "followupMessage",
-      error.message,
+      "Follow-up failed: " +
+        error.message,
       false
     );
+
   }
+
 }
 
-async function loadFollowups() {
-  try {
-    const search = await requestApi("/api/patients?search=");
 
-    const list = $("followupList");
+async function loadFollowups() {
+
+  try {
+
+    const data =
+      await requestApi(
+        "/api/followups"
+      );
+
+    const list =
+      $("followupList");
 
     list.innerHTML = "";
 
-    if (!search.patients || search.patients.length === 0) {
+    if (
+      !data.followups ||
+      data.followups.length === 0
+    ) {
+
       list.innerHTML =
-        '<div class="empty">No patients available for follow-up.</div>';
+        '<div class="empty">' +
+        "No follow-up records available." +
+        "</div>";
+
       return;
     }
 
-    list.innerHTML =
-      '<div class="empty">Follow-up records are available inside each patient medical report.</div>';
+    data.followups.forEach(
+      function(item) {
+
+        const div =
+          document.createElement("div");
+
+        div.className =
+          "item";
+
+        div.innerHTML =
+
+          "<strong>" +
+          escapeHtml(
+            item.patient_name ||
+            "Patient"
+          ) +
+          "</strong><br>" +
+
+          "Patient ID: " +
+          escapeHtml(
+            String(
+              item.patient_id
+            )
+          ) +
+
+          "<br>" +
+
+          "Date: " +
+          escapeHtml(
+            item.follow_up_date
+          ) +
+
+          "<br>" +
+
+          "Purpose: " +
+          escapeHtml(
+            item.purpose || "-"
+          ) +
+
+          "<br>" +
+
+          "Status: " +
+          escapeHtml(
+            item.status ||
+            "pending"
+          ) +
+
+          "<br>" +
+
+          "Notes: " +
+          escapeHtml(
+            item.notes || "-"
+          );
+
+        list.appendChild(div);
+
+      }
+    );
 
   } catch (error) {
-    console.log(error);
+
+    console.log(
+      "Follow-ups:",
+      error.message
+    );
+
   }
+
 }
 
+
+/* EMERGENCY */
+
 function emergencyEscalation() {
+
   showMessage(
     "emergencyMessage",
     "Emergency escalation initiated. Please contact the nearest emergency medical service or trained healthcare professional immediately.",
     true
   );
+
 }
+
+
+/* HTML SECURITY */
 
 function escapeHtml(value) {
+
   return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+
+    .replace(
+      /</g,
+      "&lt;"
+    )
+
+    .replace(
+      />/g,
+      "&gt;"
+    )
+
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+
 }
 
-document.addEventListener("DOMContentLoaded", function() {
 
-  $("portalButton").addEventListener("click", openPortal);
-  $("servicesButton").addEventListener("click", openServices);
+/* INITIAL LOAD */
 
-  $("homeLink").addEventListener("click", openHome);
-  $("servicesLink").addEventListener("click", openServices);
-  $("portalLink").addEventListener("click", openPortal);
-  $("aboutLink").addEventListener("click", openAbout);
+window.addEventListener(
+  "load",
+  function() {
 
-  document.querySelectorAll(".tab").forEach(function(tab) {
-    tab.addEventListener("click", function() {
-      activatePanel(tab.getAttribute("data-panel"));
-    });
-  });
+    loadDashboard();
 
-  $("patientForm").addEventListener("submit", registerPatient);
-  $("searchPatientButton").addEventListener("click", searchPatients);
-  $("patientSearch").addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      searchPatients();
-    }
-  });
+    loadAppointments();
 
-  $("appointmentForm").addEventListener("submit", bookAppointment);
-  $("referralForm").addEventListener("submit", createReferral);
-  $("followupForm").addEventListener("submit", createFollowup);
-  $("emergencyButton").addEventListener("click", emergencyEscalation);
+    loadReferrals();
 
-  loadDashboard();
-  loadAppointments();
-  loadReferrals();
-  loadFollowups();
+    loadFollowups();
 
-});
+  }
+);
 
+</script>
+
+</body>
+
+</html>
 `;
 }
